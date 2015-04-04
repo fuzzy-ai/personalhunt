@@ -10,3 +10,7 @@ footer {
   /* Set the fixed height of the footer here */
   height: 80px;
 }
+
+.products {
+  width: 100%
+}

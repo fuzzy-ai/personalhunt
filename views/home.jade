@@ -3,3 +3,12 @@ extends layout
 block content
   h1= title
   table.products
+    tr
+      th Name
+      th Date
+      th Posted by
+    each post in posts
+      tr
+        td= post.name
+        td= post.day
+        td= post.user.name
