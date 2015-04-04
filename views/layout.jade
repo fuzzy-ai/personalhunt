@@ -1,7 +1,16 @@
 doctype html
 html
   head
-    title= title
+    title= title + " - Personal Hunt"
+    link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css")
+    link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css")
     link(rel='stylesheet', href='/stylesheets/style.css')
+    block stylesheets
   body
     block content
+    script(src="http://code.jquery.com/jquery-2.1.3.min.js")
+    script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js")
+    block scripts
+
+      
+      
