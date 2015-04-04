@@ -1,5 +1,11 @@
 extends layout
 
 block content
+
   h1= title
-  p Welcome to #{title}
+
+  div.jumbotron
+    p
+    | Personal Hunt helps you make sense of posts on Product Hunt.
+    p
+      a.btn.btn-xlarge(href="/home") Log in with Product Hunt

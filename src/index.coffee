@@ -8,6 +8,9 @@ router.get '/', (req, res) ->
 router.get '/home', (req, res, next) ->
   res.render 'home', title: 'Home'
 
+router.get '/about', (req, res, next) ->
+  res.render 'about', title: 'About'
+
 router.get '/settings', (req, res, next) ->
   res.render 'settings', title: 'Settings'
 

@@ -1,1 +1,12 @@
-// Empty stylesheet
+body {
+  padding-top: 80px;
+}
+
+footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  padding-top: 10px;
+  /* Set the fixed height of the footer here */
+  height: 80px;
+}
