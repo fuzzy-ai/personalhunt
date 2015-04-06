@@ -46,7 +46,7 @@ router.get '/authorized', (req, res, next) ->
       params =
         client_id: app.config.clientID
         client_secret: app.config.clientSecret
-        redirect_uri: app.makeURL '/invalid'
+        redirect_uri: app.makeURL '/authorized'
         grant_type: 'authorization_code'
         code: code
 
@@ -84,6 +84,5 @@ router.get '/authorized', (req, res, next) ->
     else
       req.session.user = user.id
       res.redirect "/home", 303
-
 
 module.exports = router
