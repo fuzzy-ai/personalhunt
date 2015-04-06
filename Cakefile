@@ -36,41 +36,39 @@ buildDocker = (callback) ->
 push = (callback) ->
   cmd "sudo docker push #{DOCKERIMAGE}", callback
 
-task "clean", "Clean up extra files", ->
+clean = (callback) ->
   patterns = ["lib/*.js", "test/*.js", "*~", "lib/*~", "src/*~", "test/*~"]
   for pattern in patterns
     glob pattern, (err, files) ->
       for file in files
         fs.unlinkSync file
+  callback()
+
+task "clean", "Clean up extra files", ->
+  clean()
 
 task "build", "Build lib/ from src/", ->
-  build()
+  clean ->
+    build()
 
 task "buildtest", "Build test", ->
-  build ->
-    buildTest()
+  clean ->
+    build ->
+      buildTest()
 
 task "test", "Test the API", ->
-  invoke "clean"
-  invoke "build"
-  buildTest ->
-    cmd "vows --spec test/*-test.js"
-
-task "watch", "Watch src/ for changes", ->
-  coffee = spawn "coffee", ["-w", "-c", "-o", "lib", "src"]
-  coffee.stderr.on "data", (data) ->
-    process.stderr.write data.toString()
-  coffee.stdout.on "data", (data) ->
-    print data.toString()
+  clean ->
+    build ->
+      buildTest ->
+        cmd "vows --spec test/*-test.js"
 
 task "docker", "Build docker image", ->
-  invoke "clean"
-  build ->
-    buildDocker()
+  clean ->
+    build ->
+      buildDocker()
 
 task "push", "Deploy to repository", ->
   push()
 
 task "run", "Run the server", ->
-  invoke "docker"
   cmd "sudo docker-compose up"
