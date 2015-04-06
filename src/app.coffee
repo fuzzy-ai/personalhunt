@@ -6,38 +6,44 @@ cookieParser = require('cookie-parser')
 bodyParser = require('body-parser')
 routes = require('./index')
 
-app = express()
+newApp = (config, callback) ->
 
-# view engine setup
+  app = express()
 
-app.set 'views', path.join(__dirname, '..', 'views')
-app.set 'view engine', 'jade'
-app.use favicon()
-app.use logger('dev')
-app.use bodyParser.json()
-app.use bodyParser.urlencoded()
-app.use cookieParser()
-app.use express.static(path.join(__dirname, '..', 'public'))
+  app.set 'port', config.port
 
-app.use '/', routes
+  # view engine setup
 
-#/ catch 404 and forwarding to error handler
+  app.set 'views', path.join(__dirname, '..', 'views')
+  app.set 'view engine', 'jade'
+  app.use favicon()
+  app.use logger('dev')
+  app.use bodyParser.json()
+  app.use bodyParser.urlencoded()
+  app.use cookieParser()
+  app.use express.static(path.join(__dirname, '..', 'public'))
 
-app.use (req, res, next) ->
-  err = new Error('Not Found')
-  err.status = 404
-  next err
-  return
+  app.use '/', routes
 
-#/ error handlers
-# development error handler
-# will print stacktrace
+  #/ catch 404 and forwarding to error handler
 
-app.use (err, req, res, next) ->
-  res.status err.status or 500
-  res.render 'error',
-    message: err.message
-    error: err
-  return
+  app.use (req, res, next) ->
+    err = new Error('Not Found')
+    err.status = 404
+    next err
+    return
 
-module.exports = app
+  #/ error handlers
+  # development error handler
+  # will print stacktrace
+
+  app.use (err, req, res, next) ->
+    res.status err.status or 500
+    res.render 'error',
+      message: err.message
+      error: err
+    return
+
+  callback null, app
+
+module.exports = newApp
