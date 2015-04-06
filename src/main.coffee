@@ -4,6 +4,8 @@ newApp = require('./app')
 
 config =
   port: process.env.PORT or 80
+  driver: process.env.DRIVER or "mongodb"
+  params: if process.env.PARAMS then JSON.parse(process.env.PARAMS) else {}
 
 newApp config, (err, app) ->
   if err

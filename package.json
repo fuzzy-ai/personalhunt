@@ -14,6 +14,8 @@
     "debug": "~0.7.4",
     "jade": "~1.3.0",
     "lodash": "^3.6.0",
-    "coffee-script": "1.9.x"
+    "coffee-script": "1.9.x",
+    "databank": "0.19.x",
+    "databank-mongodb": "0.18.x"
   }
 }

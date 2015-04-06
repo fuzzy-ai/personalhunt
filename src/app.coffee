@@ -1,9 +1,12 @@
+
 express = require('express')
 path = require('path')
 favicon = require('static-favicon')
 logger = require('morgan')
 cookieParser = require('cookie-parser')
 bodyParser = require('body-parser')
+{Databank, DatabankObject} = require('databank')
+
 routes = require('./index')
 
 newApp = (config, callback) ->
@@ -44,6 +47,14 @@ newApp = (config, callback) ->
       error: err
     return
 
-  callback null, app
+  db = Databank.get config.driver, config.params
+
+  db.connect {}, (err) ->
+    if err
+      callback err
+    else
+      app.db = db
+      DatabankObject.bank = db
+      callback null, app
 
 module.exports = newApp
