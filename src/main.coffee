@@ -1,7 +1,7 @@
 newApp = require('./app')
 
 config =
-  port: process.env.PORT or 80
+  port: if process.env.PORT then parseInt(process.env.PORT, 10) else 80
   key: process.env.KEY
   cert: process.env.CERT
   hostname: process.env.HOSTNAME
