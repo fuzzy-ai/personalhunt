@@ -83,6 +83,7 @@ newApp = (config, callback) ->
         db = Databank.get config.driver, config.params
         db.connect {}, (err) =>
           if err
+            console.error err
             callback err
           else
             @db = db
@@ -98,12 +99,12 @@ newApp = (config, callback) ->
           server = https.createServer options, app
         else
           server = http.createServer app
-        server.once 'error', (err) ->
+        server.once 'error', (err) =>
           callback err
-        server.once 'listening', ->
+        server.once 'listening', =>
           callback null
         server.listen @get('port'), @config.address
-    ], (err) ->
+    ], (err) =>
       callback err
 
   callback null, app

@@ -15,9 +15,13 @@ console.log "Creating app..."
 
 newApp config, (err, app) ->
   if err
-    console.log 'Error: ' + err.message
+    console.error err
     process.exit -1
   else
     console.log "App created. Starting..."
-    app.start ->
-      console.log "Express server listening on port #{app.get('port')}"
+    app.start (err) ->
+      if err
+        console.error err
+        process.exit -1
+      else
+        console.log "Express server listening on port #{app.get('port')}"
