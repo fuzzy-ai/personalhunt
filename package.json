@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "./node_modules/.bin/coffee ./src/main.coffee"
+    "build": "cake build",
+    "clean": "cake clean",
+    "start": "node lib/main.js"
   },
   "dependencies": {
     "express": "~4.0.0",
