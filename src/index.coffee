@@ -6,6 +6,8 @@ async = require 'async'
 dummy = require "./dummy"
 web = require './web'
 
+JSON_TYPE = "application/json"
+
 router = express.Router()
 
 router.get '/', (req, res) ->
@@ -51,8 +53,8 @@ router.get '/authorized', (req, res, next) ->
         code: code
 
       headers =
-        "Accept": "application/json"
-        "Content-Type": "application/json"
+        "Accept": JSON_TYPE
+        "Content-Type": JSON_TYPE
 
       url = 'https://api.producthunt.com/v1/oauth/token'
 
@@ -60,7 +62,7 @@ router.get '/authorized', (req, res, next) ->
 
       console.dir headers
       console.dir params
-      
+
       web.post url, headers, JSON.stringify(params), (err, response, body) ->
         if err
           console.error err
