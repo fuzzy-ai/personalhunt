@@ -1,14 +1,18 @@
+http = require 'http'
+https = require 'https'
+path = require 'path'
+urlFormat = require('url').format
 
-express = require('express')
-path = require('path')
-favicon = require('static-favicon')
-logger = require('morgan')
-cookieParser = require('cookie-parser')
-bodyParser = require('body-parser')
+express = require 'express'
+favicon = require 'static-favicon'
+logger = require 'morgan'
+cookieParser = require 'cookie-parser'
+bodyParser = require 'body-parser'
 {Databank, DatabankObject} = require('databank')
+async = require 'async'
+_ = require 'lodash'
 
-routes = require('./index')
-
+routes = require './index'
 AccessToken = require './accesstoken'
 User = require './user'
 Post = require './post'
@@ -16,6 +20,22 @@ Post = require './post'
 newApp = (config, callback) ->
 
   app = express()
+
+  app.config = config
+
+  app.makeURL = (relative, search) ->
+    props =
+      protocol: if app.config.key then 'https' else 'http'
+      hostname: app.config.hostname
+      pathname: relative
+
+    if (app.config.key and app.config.port != 443) or (!app.config.key and app.config.port != 80)
+      props.port = app.config.port
+
+    if search
+      props.search = search
+
+    urlFormat props
 
   app.set 'port', config.port
 
@@ -55,15 +75,37 @@ newApp = (config, callback) ->
     User: User.schema
     Post: Post.schema
     AccessToken: AccessToken.schema
-    
-  db = Databank.get config.driver, config.params
 
-  db.connect {}, (err) ->
-    if err
+  app.start = (callback) ->
+    async.waterfall [
+      (callback) =>
+        console.log "Connecting to databank..."
+        db = Databank.get config.driver, config.params
+        db.connect {}, (err) =>
+          if err
+            callback err
+          else
+            @db = db
+            DatabankObject.bank = db
+            console.log "Connected."
+            callback null
+      (callback) =>
+        console.log "Starting HTTP server..."
+        if @config.key
+          options =
+            key: @config.key
+            cert: @config.cert
+          server = https.createServer options, app
+        else
+          server = http.createServer app
+        server.once 'error', (err) ->
+          callback err
+        server.once 'listening', ->
+          callback null
+        server.listen @get('port'), @config.address
+    ], (err) ->
       callback err
-    else
-      app.db = db
-      DatabankObject.bank = db
-      callback null, app
+
+  callback null, app
 
 module.exports = newApp
