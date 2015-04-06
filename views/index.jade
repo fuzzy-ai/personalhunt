@@ -8,4 +8,5 @@ block content
     p
     | Personal Hunt helps you make sense of posts on Product Hunt.
     p
-      a.btn.btn-xlarge(href="/home") Log in with Product Hunt
+      form(action='/authorize', method='post')
+        input.btn.btn-xlarge(type='submit', value='Log in with Product Hunt')
