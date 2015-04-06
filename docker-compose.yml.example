@@ -8,7 +8,6 @@ personalhunt:
   ports:
     - '80:80'
   environment:
-    DEBUG: '*'
     PORT: 80
     DRIVER: 'mongodb'
     PARAMS: '{"host": "db", "dbname": "fuzzyio"}'
