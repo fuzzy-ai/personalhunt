@@ -5,7 +5,10 @@ personalhunt:
   image: 'fuzzyio/personalhunt'
   links:
     - 'db:db'
+  ports:
+    - '80:80'
   environment:
+    DEBUG: '*'
     PORT: 80
     DRIVER: 'mongodb'
     PARAMS: '{"host": "db", "dbname": "fuzzyio"}'
