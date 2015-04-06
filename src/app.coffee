@@ -9,6 +9,10 @@ bodyParser = require('body-parser')
 
 routes = require('./index')
 
+AccessToken = require './accesstoken'
+User = require './user'
+Post = require './post'
+
 newApp = (config, callback) ->
 
   app = express()
@@ -47,6 +51,11 @@ newApp = (config, callback) ->
       error: err
     return
 
+  config.params.schema =
+    User: User.schema
+    Post: Post.schema
+    AccessToken: AccessToken.schema
+    
   db = Databank.get config.driver, config.params
 
   db.connect {}, (err) ->
