@@ -36,6 +36,13 @@ buildDocker = (callback) ->
 push = (callback) ->
   cmd "sudo docker push #{DOCKERIMAGE}", callback
 
+task "clean", "Clean up extra files", ->
+  patterns = ["lib/*.js", "test/*.js", "*~", "lib/*~", "src/*~", "test/*~"]
+  for pattern in patterns
+    glob pattern, (err, files) ->
+      for file in files
+        fs.unlinkSync file
+
 task "build", "Build lib/ from src/", ->
   build()
 
@@ -56,13 +63,6 @@ task "watch", "Watch src/ for changes", ->
   coffee.stdout.on "data", (data) ->
     print data.toString()
 
-task "clean", "Clean up extra files", ->
-  patterns = ["lib/*.js", "test/*.js", "*~", "lib/*~", "src/*~", "test/*~"]
-  for pattern in patterns
-    glob pattern, (err, files) ->
-      for file in files
-        fs.unlinkSync file
-
 task "docker", "Build docker image", ->
   invoke "clean"
   build ->
@@ -71,5 +71,6 @@ task "docker", "Build docker image", ->
 task "push", "Deploy to repository", ->
   push()
 
-task "deploy", "Deploy to server", ->
-  cmd 'ssh root@web4.fzio.net bash -c "docker-compose pull && docker-compose stop && docker-compose rm --force && docker-compose up -d"'
+task "run", "Run the server", ->
+  invoke "docker"
+  cmd "sudo docker-compose up"
