@@ -24,13 +24,18 @@ newApp = (config, callback) ->
   app.config = config
 
   app.makeURL = (relative, search) ->
+
     props =
-      protocol: if app.config.key then 'https' else 'http'
-      hostname: app.config.hostname
+      protocol: if @config.key then 'https' else 'http'
+      hostname: @config.hostname
       pathname: relative
 
-    if (app.config.key and app.config.port != 443) or (!app.config.key and app.config.port != 80)
-      props.port = app.config.port
+    if @config.key?
+      if @config.port != 443
+        props.port = @config.port
+    else
+      if @config.port != 80
+        props.port = @config.port
 
     if search
       props.search = search
