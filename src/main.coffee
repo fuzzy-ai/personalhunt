@@ -11,6 +11,7 @@ config =
   clientID: process.env.CLIENT_ID
   clientSecret: process.env.CLIENT_SECRET
   secret: process.env.SECRET or "bad secret"
+  devToken: process.env.DEV_TOKEN
 
 console.log "Creating app..."
 
