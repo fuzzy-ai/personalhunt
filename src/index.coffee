@@ -20,7 +20,6 @@ cacheGet = (url, token, headers, callback) ->
   entry = null
   if cache[key]
     entry = cache[key]
-    console.dir entry
     if entry.etag
       headers["If-None-Match"] = entry.etag
   web.get url, headers, (err, response, body) ->
