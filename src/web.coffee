@@ -26,7 +26,7 @@ web = (verb, url, headers, reqBody, callback) ->
 
     if !callback
       callback = reqBody
-      body = null
+      reqBody = null
 
     # Optional headers
 
