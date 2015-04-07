@@ -32,7 +32,7 @@ web = (verb, url, headers, reqBody, callback) ->
 
     if !callback
       callback = headers
-      headers = null
+      headers = {}
 
     parts = urlparse url
 
@@ -50,6 +50,9 @@ web = (verb, url, headers, reqBody, callback) ->
       method: verb.toUpperCase()
       headers: headers
       agent: false
+
+    if reqBody and !headers["Content-Length"]?
+      headers["Content-Length"] = Buffer.byteLength reqBody
 
     req = mod.request options, (res) ->
       resBody = ''
