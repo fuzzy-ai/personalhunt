@@ -27,14 +27,14 @@ html
             ul.nav.navbar-nav.navbar-right
               li.dropdown
                 a.dropdown-toggle(href='/', data-toggle='dropdown')
-                  | #{user.email}
+                  | #{user.username}
                   span.caret
                 ul.dropdown-menu(role='menu')
                   li
                     a(href='/settings') Settings
-              li
-                form(role='form', action='/logout', method='post')
-                  button#logout.btn(type='submit') Log out
+                  li
+                    form(role='form', action='/logout', method='post')
+                      button#logout.btn(type='submit') Log out
 
     .container
       block content
