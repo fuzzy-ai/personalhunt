@@ -10,11 +10,23 @@ JSON_TYPE = "application/json"
 
 router = express.Router()
 
-router.get '/', (req, res) ->
+router.get '/', (req, res, next) ->
   if req.user
-    res.render 'home',
-      posts: dummy.posts.posts
-      title: 'Home'
+    token = req.app.config.devToken
+    headers =
+      "Accept": JSON_TYPE
+      "Authorization": "Bearer #{token}"
+    url = "https://api.producthunt.com/v1/posts"
+    web.get url, headers, (err, response, body) ->
+      if err
+        next err
+      else if response.statusCode != 200
+        next new Error("Bad status code #{response.statusCode} getting posts: #{body}")
+      else
+        results = JSON.parse(body)
+        res.render 'home',
+          posts: results.posts
+          title: "Today's Posts"
   else
     res.render 'index', title: 'Welcome'
 

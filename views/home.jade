@@ -2,6 +2,7 @@ extends layout
 
 block content
   h1= title
+  p= (posts[0]) ? posts[0].day : ""
   table.products
     tr
       th Name
