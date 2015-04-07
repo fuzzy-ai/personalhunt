@@ -19,10 +19,9 @@ sortPosts = (db, client, agentID, posts, user, token, callback) ->
       db.read "UserFollowing", user.id, callback
     (followings, callback) ->
       scorePost = (post, callback) ->
-        console.dir {id: post.id, related: post.related_posts}
         inputs =
-          relatedPostUpvotes: 0
-          relatedPostComments: 0
+          relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
+          relatedPostComments: _.filter(post.related_posts, (related) -> related?.current_user?.commented_on_post).length
           followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
           followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
           followingComments: 0
