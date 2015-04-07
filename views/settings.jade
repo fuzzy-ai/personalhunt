@@ -61,6 +61,7 @@ block scripts
     $(document).ready(function() {
       $('input.setting').slider({});
       $('#save').click(function() {
+        $('#save').prop('disabled', true);
         var values = {};
         $('input.setting').each(function() {
           var id = $(this).attr('id');
