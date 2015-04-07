@@ -197,7 +197,6 @@ router.get '/settings', (req, res, next) ->
       adjusted = {}
       for input, weight of weights
         adjusted[input] = weight * 100
-      console.dir adjusted
       res.render 'settings', {title: 'Settings', weights: adjusted}
 
 camelCase = (name) ->
