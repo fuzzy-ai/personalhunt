@@ -6,13 +6,18 @@ block content
   table.products.table
     tr
       th Score
+      th Votes
       th Name
-      th Date
+      th Tagline
       th Posted by
+      th Comments
     each post in posts
       tr
         td= post.score.toFixed(1)
+        td= post.votes_count
         td
           a(href=post.redirect_url)= post.name
         td= post.tagline
-        td= post.user.name
+        td
+          a(href=post.user.profile_url)= post.user.name
+        td= post.comments_count
