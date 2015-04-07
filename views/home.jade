@@ -12,6 +12,7 @@ block content
     each post in posts
       tr
         td= post.score.toFixed(1)
-        td= post.name
-        td= post.day
+        td
+          a(href=post.redirect_url)= post.name
+        td= post.tagline
         td= post.user.name
