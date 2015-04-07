@@ -2,6 +2,7 @@ qs = require 'querystring'
 
 express = require 'express'
 async = require 'async'
+_ = require 'lodash'
 
 web = require './web'
 User = require './user'
@@ -12,8 +13,29 @@ JSON_TYPE = "application/json"
 
 router = express.Router()
 
-sortPosts = (posts, user, token, callback) ->
-  callback null, posts
+sortPosts = (client, agentID, posts, user, token, callback) ->
+  scorePost = (post, callback) ->
+    inputs =
+      relatedPostUpvotes: 0
+      relatedPostComments: 0
+      followingHunters: 0
+      followingUpvotes: 0
+      followingComments: 0
+      totalUpvotes: 0
+      totalComments: 0
+    client.evaluate agentID, inputs, (err, outputs) ->
+      if err
+        console.error err
+        callback err
+      else
+        post.score = outputs.score
+        callback null, post
+  async.map posts, scorePost, (err, scored) ->
+    if err
+      callback err
+    else
+      scored = _.sortBy scored, "score"
+      callback null, scored
 
 defaultAgent =
   inputs:
@@ -102,7 +124,7 @@ router.get '/', (req, res, next) ->
             results = JSON.parse(body)
             callback null, results.posts
       (posts, callback) ->
-        sortPosts posts, req.user, req.token, callback
+        sortPosts req.app.fuzzyIO, req.agent, posts, req.user, req.token, callback
     ], (err, posts) ->
       if err
         next err

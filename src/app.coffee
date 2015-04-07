@@ -60,7 +60,6 @@ newApp = (config, callback) ->
   app.use cookieParser()
   app.use session {secret: config.secret}
   app.use (req, res, next) ->
-    console.dir req.session
     if req.session.userID
       async.parallel [
         (callback) ->
@@ -73,10 +72,10 @@ newApp = (config, callback) ->
         if err
           next err
         else
-          [user, accessToken, agent] = results
+          [user, accessToken, userAgent] = results
           req.user = res.locals.user = user
           req.token = accessToken.token
-          req.agent = agent
+          req.agent = userAgent.agent
           next()
     else
       req.user = res.locals.user = null

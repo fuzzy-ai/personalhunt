@@ -3,13 +3,15 @@ extends layout
 block content
   h1= title
   p= (posts[0]) ? posts[0].day : ""
-  table.products
+  table.products.table
     tr
+      th Score
       th Name
       th Date
       th Posted by
     each post in posts
       tr
+        td= post.score.toFixed(1)
         td= post.name
         td= post.day
         td= post.user.name
