@@ -10,6 +10,7 @@ config =
   params: if process.env.PARAMS then JSON.parse(process.env.PARAMS) else {}
   clientID: process.env.CLIENT_ID
   clientSecret: process.env.CLIENT_SECRET
+  secret: process.env.SECRET or "bad secret"
 
 console.log "Creating app..."
 

@@ -4,6 +4,7 @@ path = require 'path'
 urlFormat = require('url').format
 
 express = require 'express'
+session = require 'express-session'
 favicon = require 'static-favicon'
 logger = require 'morgan'
 cookieParser = require 'cookie-parser'
@@ -53,6 +54,7 @@ newApp = (config, callback) ->
   app.use bodyParser.json()
   app.use bodyParser.urlencoded()
   app.use cookieParser()
+  app.use session {secret: config.secret}
   app.use express.static(path.join(__dirname, '..', 'public'))
 
   app.use '/', routes
