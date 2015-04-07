@@ -21,8 +21,8 @@ sortPosts = (client, agentID, posts, user, token, callback) ->
       followingHunters: 0
       followingUpvotes: 0
       followingComments: 0
-      totalUpvotes: 0
-      totalComments: 0
+      totalUpvotes: post.votes_count
+      totalComments: post.comments_count
     client.evaluate agentID, inputs, (err, outputs) ->
       if err
         console.error err
@@ -34,7 +34,7 @@ sortPosts = (client, agentID, posts, user, token, callback) ->
     if err
       callback err
     else
-      scored = _.sortBy scored, "score"
+      scored = _.sortByOrder scored, ["score"], [false]
       callback null, scored
 
 defaultAgent =
