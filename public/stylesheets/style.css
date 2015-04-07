@@ -7,6 +7,7 @@ body {
   padding-top: 80px;
   /* Margin bottom by footer height */
   margin-bottom: 80px;
+  font-family: 'Open Sans', sans-serif;
 }
 
 .footer {
@@ -20,4 +21,87 @@ body {
 
 .products {
   width: 100%
+}
+
+.navbar-default .navbar-brand {
+  color: #da552f;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.firstrow {
+	padding-bottom: 5px;
+}
+
+.productlist {
+	padding-bottom: 25px;
+}
+
+.day {
+  color: #534540;
+  display: inline;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 8px 0 0;
+}
+
+.date {
+  color: #bbbbbb;
+  font-size: 16px;
+}
+
+.upvote {
+  background: #edeceb;
+  border-radius: 3px;
+  box-shadow: 0 1px 0 0 rgba(83,69,64,0.3),0 1px 1px 0 rgba(0,0,0,0.2);
+  float: left;
+  height: 44px;
+  position: relative;
+  text-align: center;
+  width: 34px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 16px;
+  padding: 15px 0 0 0;
+  margin-right: 10px;
+}
+
+.uparrow {
+  border-bottom: 14px solid #534540;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 14px solid transparent;
+  left: 20px;
+  position: absolute;
+  top: -11px;
+}
+
+.score {
+	width: 34px;
+	font-family: "Convergence";
+	padding-left: 5px;
+}
+.title {
+  text-decoration: none;
+  color: #534540;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 6px 2px 0 0px;
+}
+
+.description {
+  color: #999999;
+  font-size: 17px;
+  margin: 0px 0 0 0px;
+  display: block;
+  line-height: 20px;
+}
+
+.comments {
+  color: #bbbbbb;
+  font-size: 16px;
+  line-height: 19px;
+  padding-left: 5px;
+  padding-bottom: 1px;
 }
