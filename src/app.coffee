@@ -70,6 +70,7 @@ newApp = (config, callback) ->
       res.locals.user = req.user
     else
       req.user = res.locals.user = null
+    next()
 
   app.use express.static(path.join(__dirname, '..', 'public'))
 
