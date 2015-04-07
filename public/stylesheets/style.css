@@ -42,7 +42,7 @@ body {
   color: #534540;
   display: inline;
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 600;
   margin: 0 8px 0 0;
 }
 
@@ -61,7 +61,7 @@ body {
   text-align: center;
   width: 34px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 16px;
   padding: 15px 0 0 0;
   margin-right: 10px;
@@ -86,7 +86,7 @@ body {
   text-decoration: none;
   color: #534540;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   margin: 6px 2px 0 0px;
 }
 
@@ -104,4 +104,8 @@ body {
   line-height: 19px;
   padding-left: 5px;
   padding-bottom: 1px;
+}
+
+#logout {
+	margin-top: 8px;
 }
