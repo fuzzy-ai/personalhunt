@@ -1,4 +1,5 @@
 qs = require 'querystring'
+assert = require 'assert'
 
 express = require 'express'
 async = require 'async'
@@ -14,6 +15,13 @@ JSON_TYPE = "application/json"
 router = express.Router()
 
 sortPosts = (db, client, agentID, posts, user, token, callback) ->
+  assert.ok _.isObject(db), "#{db} is not an object"
+  assert.ok _.isObject(client), "#{client} is not an object"
+  assert.ok _.isString(agentID), "#{agentID} is not a string"
+  assert.ok _.isArray(posts), "#{posts} is not an array"
+  assert.ok _.isObject(user), "#{user} is not an object"
+  assert.ok _.isString(token), "#{token} is not a string"
+
   async.waterfall [
     (callback) ->
       db.read "UserFollowing", user.id, callback
@@ -120,6 +128,12 @@ makeDefaultUserAgent = (client, user, callback) ->
   ], callback
 
 updateUserAgent = (client, user, agentID, weights, callback) ->
+
+  assert.ok _.isObject(client), "#{client} is not an object"
+  assert.ok _.isObject(user), "#{user} is not an object"
+  assert.ok _.isString(agentID), "#{agentID} is not a string"
+  assert.ok _.isObject(weights), "#{weights} is not an object"
+
   newAgent = makeAgent weights
   client.putAgent agentID, newAgent, callback
 
@@ -127,6 +141,7 @@ router.get '/', (req, res, next) ->
   if !req.user?
     res.render 'index', title: 'Welcome'
   else
+    start = last = Date.now()
     async.waterfall [
       (callback) ->
         token = req.token
@@ -141,6 +156,9 @@ router.get '/', (req, res, next) ->
             callback new Error("Bad status code #{response.statusCode} getting posts: #{body}")
           else
             results = JSON.parse(body)
+            now = Date.now()
+            console.log "#{now - start} (#{now - last}) to get posts"
+            last = now
             callback null, results.posts
       (posts, callback) ->
         downloadFullPost = (post, callback) ->
@@ -159,11 +177,17 @@ router.get '/', (req, res, next) ->
               callback null, results.post
         async.map posts, downloadFullPost, callback
       (posts, callback) ->
+        now = Date.now()
+        console.log "#{now - start} (#{now - last}) to get full posts"
+        last = now
         sortPosts req.app.db, req.app.fuzzyIO, req.agent, posts, req.user, req.token, callback
     ], (err, posts) ->
       if err
         next err
       else
+        now = Date.now()
+        console.log "#{now - start} (#{now - last}) to sort posts"
+        last = now
         res.render 'home',
           posts: posts
           title: "Today's Posts"
@@ -223,6 +247,43 @@ router.post '/authorize', (req, res, next) ->
   url = 'https://api.producthunt.com/v1/oauth/authorize?' + qs.stringify(props)
   res.redirect url, 303
 
+updateFollowing = (db, user, token, callback) ->
+
+  following = []
+
+  getNext = (oldest, callback) ->
+
+    params =
+      per_page: 100
+      order: "desc"
+
+    if oldest?
+      params.older = oldest
+
+    url = "https://api.producthunt.com/v1/users/#{user.id}/following?" + qs.stringify(params)
+
+    web.get url, {Authorization: "Bearer #{token}"}, (err, response, body) ->
+      if err
+        callback err
+      else if response.statusCode != 200
+        callback new Error("Bad status code #{response.statusCode}: #{body}")
+      else
+        results = JSON.parse(body)
+        page = _.pluck results.following, "id"
+        users = _.pluck results.following, "user"
+        userIDs = _.map(_.pluck(users, "id"), (id) -> parseInt(id, 10))
+        if page.length > 0
+          following = following.concat userIDs
+          getNext page[page.length - 1], callback
+        else
+          callback null, _.uniq(following.sort())
+
+  getNext null, (err, following) ->
+    if err
+      callback err
+    else
+      db.save "UserFollowing", user.id, following, callback
+
 router.get '/authorized', (req, res, next) ->
 
   code = req.query.code
@@ -230,6 +291,8 @@ router.get '/authorized', (req, res, next) ->
 
   token = null
   user = null
+
+  last = start = Date.now()
 
   async.waterfall [
     (callback) ->
@@ -258,6 +321,9 @@ router.get '/authorized', (req, res, next) ->
         else
           results = JSON.parse(body)
           token = results.access_token
+          now = Date.now()
+          console.log "#{now - start} (#{now - last}) to get token"
+          last = now
           callback null
     (callback) ->
       web.get 'https://api.producthunt.com/v1/me', {Authorization: "Bearer #{token}"}, (err, response, body) ->
@@ -268,52 +334,26 @@ router.get '/authorized', (req, res, next) ->
         else
           results = JSON.parse(body)
           user = results.user
+          now = Date.now()
+          console.log "#{now - start} (#{now - last}) to get user"
+          last = now
           callback null
     (callback) ->
       User.ensure user, callback
     (ensured, callback) ->
-      following = []
-      getNext = (oldest, callback) ->
-
-        params =
-          per_page: 100
-          order: "desc"
-
-        if oldest?
-          params.older = oldest
-
-        url = "https://api.producthunt.com/v1/users/#{user.id}/following?" + qs.stringify(params)
-
-        console.dir url
-
-        web.get url, {Authorization: "Bearer #{token}"}, (err, response, body) ->
-          if err
-            callback err
-          else if response.statusCode != 200
-            callback new Error("Bad status code #{response.statusCode}: #{body}")
-          else
-            results = JSON.parse(body)
-            page = _.pluck results.following, "id"
-            users = _.pluck results.following, "user"
-            userIDs = _.map(_.pluck(users, "id"), (id) -> parseInt(id, 10))
-            if page.length > 0
-              following = following.concat userIDs
-              getNext page[page.length - 1], callback
-            else
-              callback null, _.uniq(following.sort())
-      getNext null, (err, following) ->
-        if err
-          callback err
-        else
-          req.app.db.save "UserFollowing", user.id, following, callback
-    (following, callback) ->
+      now = Date.now()
+      console.log "#{now - start} (#{now - last}) to get ensured"
+      last = now
       at = new AccessToken {token: token, user: user.id}
       at.save callback
     (saved, callback) ->
+      now = Date.now()
+      console.log "#{now - start} (#{now - last}) to save access token"
+      last = now
       UserAgent.get user.id, (err, agent) ->
         if err
           if err.name == "NoSuchThingError"
-            makeDefaultUserAgent req.app.fuzzyIO, user.id, callback
+            makeDefaultUserAgent req.app.fuzzyIO, user.id, token, callback
           else
             callback err
         else
@@ -322,7 +362,20 @@ router.get '/authorized', (req, res, next) ->
     if err
       next err
     else
+
+      now = Date.now()
+      console.log "#{now - start} (#{now - last}) to get user token"
+      last = now
+
       req.session.userID = user.id
+
+      setImmediate ->
+        updateFollowing req.app.db, user, token, (err, following) ->
+          if err
+            console.error err
+          else
+            console.log "Updated following for #{user.id}: #{following.length}"
+
       res.redirect "/", 303
 
 router.post '/logout', (req, res, next) ->
