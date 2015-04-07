@@ -21,6 +21,7 @@
     "databank-mongodb": "0.18.x",
     "express-session": "1.10.x",
     "fuzzy.io": "0.2.x",
-    "async": "0.9.x"
+    "async": "0.9.x",
+    "bootstrap-slider": "4.7.x"
   }
 }

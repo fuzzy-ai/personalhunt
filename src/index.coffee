@@ -13,29 +13,35 @@ JSON_TYPE = "application/json"
 
 router = express.Router()
 
-sortPosts = (client, agentID, posts, user, token, callback) ->
-  scorePost = (post, callback) ->
-    inputs =
-      relatedPostUpvotes: 0
-      relatedPostComments: 0
-      followingHunters: 0
-      followingUpvotes: 0
-      followingComments: 0
-      totalUpvotes: post.votes_count
-      totalComments: post.comments_count
-    client.evaluate agentID, inputs, (err, outputs) ->
-      if err
-        console.error err
-        callback err
-      else
-        post.score = outputs.score
-        callback null, post
-  async.map posts, scorePost, (err, scored) ->
-    if err
-      callback err
-    else
-      scored = _.sortByOrder scored, ["score"], [false]
-      callback null, scored
+sortPosts = (db, client, agentID, posts, user, token, callback) ->
+  async.waterfall [
+    (callback) ->
+      db.read "UserFollowing", user.id, callback
+    (followings, callback) ->
+      scorePost = (post, callback) ->
+        console.dir {id: post.id, related: post.related_posts}
+        inputs =
+          relatedPostUpvotes: 0
+          relatedPostComments: 0
+          followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
+          followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
+          followingComments: 0
+          totalUpvotes: post.votes_count
+          totalComments: post.comments_count
+        client.evaluate agentID, inputs, (err, outputs) ->
+          if err
+            console.error err
+            callback err
+          else
+            post.score = outputs.score
+            callback null, post
+      async.map posts, scorePost, (err, scored) ->
+        if err
+          callback err
+        else
+          scored = _.sortByOrder scored, ["score"], [false]
+          callback null, scored
+  ], callback
 
 defaultAgent =
   inputs:
@@ -124,7 +130,23 @@ router.get '/', (req, res, next) ->
             results = JSON.parse(body)
             callback null, results.posts
       (posts, callback) ->
-        sortPosts req.app.fuzzyIO, req.agent, posts, req.user, req.token, callback
+        downloadFullPost = (post, callback) ->
+          token = req.token
+          headers =
+            "Accept": JSON_TYPE
+            "Authorization": "Bearer #{token}"
+          url = "https://api.producthunt.com/v1/posts/#{post.id}"
+          web.get url, headers, (err, response, body) ->
+            if err
+              callback err
+            else if response.statusCode != 200
+              callback new Error("Bad status code #{response.statusCode} getting posts: #{body}")
+            else
+              results = JSON.parse(body)
+              callback null, results.post
+        async.map posts, downloadFullPost, callback
+      (posts, callback) ->
+        sortPosts req.app.db, req.app.fuzzyIO, req.agent, posts, req.user, req.token, callback
     ], (err, posts) ->
       if err
         next err
@@ -198,6 +220,41 @@ router.get '/authorized', (req, res, next) ->
     (callback) ->
       User.ensure user, callback
     (ensured, callback) ->
+      following = []
+      getNext = (oldest, callback) ->
+
+        params =
+          per_page: 100
+          order: "desc"
+
+        if oldest?
+          params.older = oldest
+
+        url = "https://api.producthunt.com/v1/users/#{user.id}/following?" + qs.stringify(params)
+
+        console.dir url
+
+        web.get url, {Authorization: "Bearer #{token}"}, (err, response, body) ->
+          if err
+            callback err
+          else if response.statusCode != 200
+            callback new Error("Bad status code #{response.statusCode}: #{body}")
+          else
+            results = JSON.parse(body)
+            page = _.pluck results.following, "id"
+            users = _.pluck results.following, "user"
+            userIDs = _.map(_.pluck(users, "id"), (id) -> parseInt(id, 10))
+            if page.length > 0
+              following = following.concat userIDs
+              getNext page[page.length - 1], callback
+            else
+              callback null, _.uniq(following.sort())
+      getNext null, (err, following) ->
+        if err
+          callback err
+        else
+          req.app.db.save "UserFollowing", user.id, following, callback
+    (following, callback) ->
       at = new AccessToken {token: token, user: user.id}
       at.save callback
     (saved, callback) ->
