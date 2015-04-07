@@ -12,6 +12,7 @@ config =
   clientSecret: process.env.CLIENT_SECRET
   secret: process.env.SECRET or "bad secret"
   devToken: process.env.DEV_TOKEN
+  fuzzyIOAPIKey: process.env.FUZZY_IO_API_KEY
 
 console.log "Creating app..."
 

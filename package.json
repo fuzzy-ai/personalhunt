@@ -19,6 +19,7 @@
     "coffee-script": "1.9.x",
     "databank": "0.19.x",
     "databank-mongodb": "0.18.x",
-    "express-session": "1.10.x"
+    "express-session": "1.10.x",
+    "fuzzy.io": "0.2.x"
   }
 }

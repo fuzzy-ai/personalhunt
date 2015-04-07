@@ -12,11 +12,13 @@ bodyParser = require 'body-parser'
 {Databank, DatabankObject} = require('databank')
 async = require 'async'
 _ = require 'lodash'
+FuzzyIOClient = require 'fuzzy.io'
 
 routes = require './index'
 AccessToken = require './accesstoken'
 User = require './user'
 Post = require './post'
+UserAgent = require './useragent'
 
 newApp = (config, callback) ->
 
@@ -43,6 +45,8 @@ newApp = (config, callback) ->
 
     urlFormat props
 
+  app.fuzzyIO = new FuzzyIOClient config.fuzzyIOAPIKey
+
   app.set 'port', config.port
 
   # view engine setup
@@ -63,13 +67,16 @@ newApp = (config, callback) ->
           User.get req.session.userID, callback
         (callback) ->
           AccessToken.get req.session.userID, callback
+        (callback) ->
+          UserAgent.get req.session.userID, callback
       ], (err, results) ->
         if err
           next err
         else
-          [user, accessToken] = results
+          [user, accessToken, agent] = results
           req.user = res.locals.user = user
           req.token = accessToken.token
+          req.agent = agent
           next()
     else
       req.user = res.locals.user = null
@@ -102,6 +109,7 @@ newApp = (config, callback) ->
     User: User.schema
     Post: Post.schema
     AccessToken: AccessToken.schema
+    UserAgent: UserAgent.schema
 
   app.start = (callback) ->
     async.waterfall [

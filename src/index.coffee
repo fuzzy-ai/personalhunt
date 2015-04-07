@@ -6,30 +6,110 @@ async = require 'async'
 web = require './web'
 User = require './user'
 AccessToken = require './accesstoken'
+UserAgent = require './useragent'
 
 JSON_TYPE = "application/json"
 
 router = express.Router()
 
+sortPosts = (posts, user, token, callback) ->
+  callback null, posts
+
+defaultAgent =
+  inputs:
+    relatedPostUpvotes:
+      veryLow: [0, 1]
+      low: [0, 1, 2]
+      medium: [1, 2, 3]
+      high: [2, 3, 4]
+      veryHigh: [3, 4]
+    relatedPostComments:
+      veryLow: [0, 1]
+      low: [0, 1, 2]
+      medium: [1, 2, 3]
+      high: [2, 3, 4]
+      veryHigh: [3, 4]
+    followingHunters:
+      veryLow: [0, 1]
+      low: [0, 1, 2]
+      medium: [1, 2, 3]
+      high: [2, 3, 4]
+      veryHigh: [3, 4]
+    followingUpvotes:
+      veryLow: [0, 12.5]
+      low: [0, 12.5, 25]
+      medium: [12.5, 25, 37.5]
+      high: [25, 37.5, 50]
+      veryHigh: [37.5, 50]
+    followingComments:
+      veryLow: [0, 1]
+      low: [0, 1, 2]
+      medium: [1, 2, 3]
+      high: [2, 3, 4]
+      veryHigh: [3, 4]
+    totalUpvotes:
+      veryLow: [0, 125]
+      low: [0, 125, 250]
+      medium: [125, 250, 375]
+      high: [250, 375, 500]
+      veryHigh: [375, 500]
+    totalComments:
+      veryLow: [0, 10]
+      low: [0, 10, 20]
+      medium: [10, 20, 30]
+      high: [20, 30, 40]
+      veryHigh: [30, 40]
+  outputs:
+    score:
+      veryLow: [0, 25]
+      low: [0, 25, 50]
+      medium: [25, 50, 75]
+      high: [50, 75, 100]
+      veryHigh: [75, 100]
+  rules: []
+
+for input, value of defaultAgent.inputs
+  for output, value of defaultAgent.outputs
+    for set in ['veryLow', 'low', 'medium', 'high', 'veryHigh']
+      rule = "IF #{input} IS #{set} THEN #{output} is #{set}"
+      defaultAgent.rules.push rule
+
+makeDefaultUserAgent = (client, user, callback) ->
+  async.waterfall [
+    (callback) ->
+      client.newAgent defaultAgent, callback
+    (agent, callback) ->
+      UserAgent.create {user: user, agent: agent.id}, callback
+  ], callback
+
 router.get '/', (req, res, next) ->
-  if req.user
-    token = req.token
-    headers =
-      "Accept": JSON_TYPE
-      "Authorization": "Bearer #{token}"
-    url = "https://api.producthunt.com/v1/posts"
-    web.get url, headers, (err, response, body) ->
+  if !req.user?
+    res.render 'index', title: 'Welcome'
+  else
+    async.waterfall [
+      (callback) ->
+        token = req.token
+        headers =
+          "Accept": JSON_TYPE
+          "Authorization": "Bearer #{token}"
+        url = "https://api.producthunt.com/v1/posts"
+        web.get url, headers, (err, response, body) ->
+          if err
+            callback err
+          else if response.statusCode != 200
+            callback new Error("Bad status code #{response.statusCode} getting posts: #{body}")
+          else
+            results = JSON.parse(body)
+            callback null, results.posts
+      (posts, callback) ->
+        sortPosts posts, req.user, req.token, callback
+    ], (err, posts) ->
       if err
         next err
-      else if response.statusCode != 200
-        next new Error("Bad status code #{response.statusCode} getting posts: #{body}")
       else
-        results = JSON.parse(body)
         res.render 'home',
-          posts: results.posts
+          posts: posts
           title: "Today's Posts"
-  else
-    res.render 'index', title: 'Welcome'
 
 router.get '/about', (req, res, next) ->
   res.render 'about', title: 'About'
@@ -98,12 +178,20 @@ router.get '/authorized', (req, res, next) ->
     (ensured, callback) ->
       at = new AccessToken {token: token, user: user.id}
       at.save callback
+    (saved, callback) ->
+      UserAgent.get user.id, (err, agent) ->
+        if err
+          if err.name == "NoSuchThingError"
+            makeDefaultUserAgent req.app.fuzzyIO, user.id, callback
+          else
+            callback err
+        else
+          callback null, agent
   ], (err) ->
     if err
       next err
     else
       req.session.userID = user.id
-      console.dir req.session
       res.redirect "/", 303
 
 router.post '/logout', (req, res, next) ->
