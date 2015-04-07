@@ -56,22 +56,25 @@ newApp = (config, callback) ->
   app.use cookieParser()
   app.use session {secret: config.secret}
   app.use (req, res, next) ->
-    if req.session.authorized
-      # FIXME: dummy user
-      req.user =
-        id: 46891
-        name: "Evan Prodromou"
-        headline: "Fuzzy.io creator"
-        created_at: "2015-04-01T00:00:00Z"
-        username: "evanpro"
-        website_url: "https://en.wikipedia.org/wiki/Evan_Prodromou"
-        image_url: "http://avatars.producthunt.com/evanpro/images/110@2X"
-        profile_url: "http://www.producthunt.com/evanpro"
-      res.locals.user = req.user
+    console.dir req.session
+    if req.session.userID
+      async.parallel [
+        (callback) ->
+          User.get req.session.userID, callback
+        (callback) ->
+          AccessToken.get req.session.userID, callback
+      ], (err, results) ->
+        if err
+          next err
+        else
+          [user, accessToken] = results
+          req.user = res.locals.user = user
+          req.token = accessToken.token
+          next()
     else
       req.user = res.locals.user = null
-    next()
-
+      req.token = null
+      next()
   app.use express.static(path.join(__dirname, '..', 'public'))
 
   app.use '/', routes
