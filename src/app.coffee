@@ -82,6 +82,7 @@ newApp = (config, callback) ->
       req.token = null
       next()
   app.use express.static(path.join(__dirname, '..', 'public'))
+  app.use express.static(path.join(__dirname, "..", "node_modules", "bootstrap-slider", "dist"))
 
   app.use '/', routes
 

@@ -1,4 +1,65 @@
 extends layout
 
+block stylesheets
+  link(rel="stylesheet", href="/css/bootstrap-slider.min.css")
+  style.
+    .setting .slider-selection {
+      background: #BABABA;
+    }
+
 block content
   h1= title
+
+  p Which factors are most important to you?
+
+  form(id="settings", action="", method="post")
+
+  h3 You
+
+  p
+    label(for="related-post-upvotes") You upvoted a related post
+    br
+    input.setting(id="related-post-upvotes" data-slider-id='related-post-upvotes-slider' type="text" data-slider-min="0" data-slider-max="100" data-slider-step="5" data-slider-value="50")
+
+  p
+    label(for="related-post-comments") You commented on a related post
+    br
+    input.setting(id="related-post-comments" data-slider-id='related-post-comments-slider' type="text" data-slider-min="0" data-slider-max="100" data-slider-step="5" data-slider-value="50")
+
+  h3 People you follow
+
+  p
+    label(for="following-hunters") A friend hunted it
+    br
+    input.setting(id="following-hunters" data-slider-id='following-hunters-slider' type="text" data-slider-min="0" data-slider-max="100" data-slider-step="5" data-slider-value="50")
+
+  p
+    label(for="following-upvotes") A friend upvoted it
+    br
+    input.setting(id="following-upvotes" data-slider-id='following-upvotes-slider' type="text" data-slider-min="0" data-slider-max="100" data-slider-step="5" data-slider-value="50")
+
+  p
+    label(for="following-comments") A friend commented on it
+    br
+    input.setting(id="following-comments" data-slider-id='following-comments-slider' type="text" data-slider-min="0" data-slider-max="100" data-slider-step="5" data-slider-value="50")
+
+  h3 Everyone
+
+  p
+    label(for="total-upvotes") Number of upvotes
+    br
+    input.setting(id="total-upvotes" data-slider-id='total-upvotes-slider' type="text" data-slider-min="0" data-slider-max="100" data-slider-step="5" data-slider-value="50")
+
+  p
+    label(for="total-comments") Number of comments
+    br
+    input.setting(id="total-comments" data-slider-id='total-comments-slider' type="text" data-slider-min="0" data-slider-max="100" data-slider-step="5" data-slider-value="50")
+
+  button.btn#save Save
+
+block scripts
+  script(src="/bootstrap-slider.min.js")
+  script.
+    $(document).ready(function() {
+      $('input.setting').slider({});
+    });
