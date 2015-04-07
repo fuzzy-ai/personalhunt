@@ -14,6 +14,33 @@ JSON_TYPE = "application/json"
 
 router = express.Router()
 
+cache = {}
+cacheGet = (url, token, headers, callback) ->
+  key = "#{token}|#{url}"
+  entry = null
+  if cache[key]
+    entry = cache[key]
+    console.dir entry
+    if entry.etag
+      headers["If-None-Match"] = entry.etag
+  web.get url, headers, (err, response, body) ->
+    if err
+      callback err
+    else if response.statusCode == 304
+      callback null, entry.body
+    else if response.statusCode != 200
+      callback new Error("Bad status code #{response.statusCode} getting posts: #{body}")
+    else
+      key = "#{token}|#{url}"
+      entry =
+        url: url
+        token: token
+        etag: response.headers.etag
+        body: body
+      cache[key] = entry
+      console.dir entry
+      callback null, body
+
 sortPosts = (db, client, agentID, posts, user, token, callback) ->
   assert.ok _.isObject(db), "#{db} is not an object"
   assert.ok _.isObject(client), "#{client} is not an object"
@@ -24,7 +51,13 @@ sortPosts = (db, client, agentID, posts, user, token, callback) ->
 
   async.waterfall [
     (callback) ->
-      db.read "UserFollowing", user.id, callback
+      db.read "UserFollowing", user.id, (err, following) ->
+        if err and err.name == "NoSuchThingError"
+          callback null, []
+        else if err
+          callback err
+        else
+          callback null, following
     (followings, callback) ->
       scorePost = (post, callback) ->
         inputs =
@@ -42,7 +75,7 @@ sortPosts = (db, client, agentID, posts, user, token, callback) ->
           else
             post.score = outputs.score
             callback null, post
-      async.map posts, scorePost, (err, scored) ->
+      async.mapLimit posts, 4, scorePost, (err, scored) ->
         if err
           callback err
         else
@@ -149,11 +182,9 @@ router.get '/', (req, res, next) ->
           "Accept": JSON_TYPE
           "Authorization": "Bearer #{token}"
         url = "https://api.producthunt.com/v1/posts"
-        web.get url, headers, (err, response, body) ->
+        cacheGet url, token, headers, (err, body) ->
           if err
             callback err
-          else if response.statusCode != 200
-            callback new Error("Bad status code #{response.statusCode} getting posts: #{body}")
           else
             results = JSON.parse(body)
             now = Date.now()
@@ -167,11 +198,9 @@ router.get '/', (req, res, next) ->
             "Accept": JSON_TYPE
             "Authorization": "Bearer #{token}"
           url = "https://api.producthunt.com/v1/posts/#{post.id}"
-          web.get url, headers, (err, response, body) ->
+          cacheGet url, token, headers, (err, body) ->
             if err
               callback err
-            else if response.statusCode != 200
-              callback new Error("Bad status code #{response.statusCode} getting posts: #{body}")
             else
               results = JSON.parse(body)
               callback null, results.post
