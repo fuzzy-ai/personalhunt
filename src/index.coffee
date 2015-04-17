@@ -4,6 +4,7 @@ assert = require 'assert'
 express = require 'express'
 async = require 'async'
 _ = require 'lodash'
+LRU = require 'lru-cache'
 
 web = require './web'
 User = require './user'
@@ -14,12 +15,18 @@ JSON_TYPE = "application/json"
 
 router = express.Router()
 
-cache = {}
+options =
+  max: 128000000
+  length: (n) -> return n.length
+  maxAge: 1000 * 60 * 60 * 24 * 30
+
+cache = LRU options
+
 cacheGet = (url, token, headers, callback) ->
   key = "#{token}|#{url}"
   entry = null
-  if cache[key]
-    entry = cache[key]
+  if cache.has(key)
+    entry = JSON.parse(cache.get(key))
     if entry.etag
       headers["If-None-Match"] = entry.etag
   web.get url, headers, (err, response, body) ->
@@ -36,7 +43,7 @@ cacheGet = (url, token, headers, callback) ->
         token: token
         etag: response.headers.etag
         body: body
-      cache[key] = entry
+      cache.set(key, JSON.stringify(entry))
       callback null, body
 
 sortPosts = (db, client, agentID, posts, user, token, callback) ->
