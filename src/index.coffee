@@ -37,7 +37,6 @@ cacheGet = (url, token, headers, callback) ->
         etag: response.headers.etag
         body: body
       cache[key] = entry
-      console.dir entry
       callback null, body
 
 sortPosts = (db, client, agentID, posts, user, token, callback) ->
@@ -69,7 +68,6 @@ sortPosts = (db, client, agentID, posts, user, token, callback) ->
           totalComments: post.comments_count
         client.evaluate agentID, inputs, (err, outputs) ->
           if err
-            console.error err
             callback err
           else
             post.score = outputs.score
@@ -258,7 +256,6 @@ router.post '/settings', (req, res, next) ->
   weights = {}
   for name, value of req.body
     weights[camelCase(name)] = parseInt(value, 10)/100
-  console.dir weights
   updateUserAgent req.app.fuzzyIO, req.user, req.agent, weights, (err) ->
     if err
       next err
