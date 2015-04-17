@@ -4,14 +4,14 @@ block content
 
   h1= title
 
-  div.jumbotron
+  div.home-text
     p
-    | Surface the Product Hunt posts most relevant to you by choosing which signals you care about most:
+    | Find the products most relevant to you:
     ul
-      li Number of upvotes and comments
-      li Products that friends have hunted
-      li Products that your friends have upvoted or commented on
-      li Products that are related to ones that you've upvoted or commented on
+      li Posted by friends
+      li Upvoted or commented on by friends
+      li Related to ones you've upvoted or commented on
+    br
     p
       form(action='/authorize', method='post')
         input.btn.btn-primary.btn-lg(type='submit', value='Log in with Product Hunt')
