@@ -171,7 +171,7 @@ updateUserAgent = (client, user, agentID, weights, callback) ->
 
 router.get '/', (req, res, next) ->
   if !req.user?
-    res.render 'index', title: 'Welcome'
+    res.render 'index', title: 'Your Personal Product Hunt Leaderboard'
   else
     start = last = Date.now()
     async.waterfall [
