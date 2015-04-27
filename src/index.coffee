@@ -61,11 +61,7 @@ defaultAgent =
       high: [2, 3, 4]
       veryHigh: [3, 4]
     followingHunters:
-      veryLow: [0, 1]
-      low: [0, 1, 2]
-      medium: [1, 2, 3]
-      high: [2, 3, 4]
-      veryHigh: [3, 4]
+      high: [0, 1, 2]
     followingUpvotes:
       veryLow: [0, 12.5]
       low: [0, 12.5, 25]
