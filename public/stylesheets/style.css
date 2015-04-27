@@ -107,6 +107,12 @@ body {
   line-height: 20px;
 }
 
+.vertical-align {
+    display: flex;
+    align-items: center;
+}
+
+
 .comments {
   color: #bbbbbb;
   font-size: 16px;
