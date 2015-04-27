@@ -220,6 +220,10 @@ router.get '/posts', userRequired, (req, res, next) ->
         now = Date.now()
         console.log "#{now - start} (#{now - last}) to download and sort posts"
         last = now
+        scored = _.map scored, (post) ->
+          post.user.image_url = _.pick post.user.image_url, ["40px"]
+          post.user = _.pick post.user, ["profile_url", "name", "image_url"]
+          _.pick post, ["day", "score", "votes_count", "redirect_url", "name", "tagline", "user", "comments_count"]
         res.json scored
 
 router.get '/about', (req, res, next) ->
