@@ -2,25 +2,47 @@ extends layout
 
 block content
   h1.day= title
-  p.date= (posts[0]) ? posts[0].day : ""
-  .container
-    .row.firstrow
-      .col-md-1.score f.io
-      .col-md-1.score
-        span.uparrow 
-      .col-md-7
-      .col-md-2
-      .col-md-1
-    each post in posts
-      .row.productlist
-        .col-md-1.upvote= post.score.toFixed(1)
-        .col-md-1.upvote= post.votes_count
+  div#main
+    p#waiting
+block scripts
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/jade/1.9.2/jade.min.js")
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.0.1/spin.min.js")
+  script(src="https://cdnjs.cloudflare.com/ajax/libs/spin.js/2.0.1/jquery.spin.min.js")
+  script.
+    var tmpl = function(sel, options) {
+      return jade.render($(sel).text(), options);
+    };
+
+    $(document).ready(function() {
+      $('#waiting').spin();
+      $.get('/posts', function(posts) {
+        $('#waiting').replaceWith(tmpl('#posts-table-source', {posts: posts}));
+      });
+    });
+  script#posts-table-source(type="application/x-jade").
+    p.date= (posts[0]) ? posts[0].day : ""
+    .container
+      .row.firstrow
+        .col-md-1.score f.io
+        .col-md-1.score
+          span.uparrow
         .col-md-7
-          a.title(href=post.redirect_url)= post.name
-          .description= post.tagline
         .col-md-2
-          a(href=post.user.profile_url, title=post.user.name)
-            img.img-circle(src=post.user.image_url["40px"], width="40px", height="40px", alt=post.user.name)
         .col-md-1
-          <svg width="16px" height="14px" viewBox="0 0 16 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns"><g id="Flow" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage"><g sketch:type="MSArtboardGroup" transform="translate(-1183.000000, -853.000000)" fill="#BAB5B3" opacity="0.5"><g id="Posts" sketch:type="MSLayerGroup" transform="translate(325.000000, 245.000000)"><path d="M859.869393,618.060241 C858.702638,616.995887 858,615.623267 858,614.125 C858,610.742256 861.581722,608 866,608 C870.418278,608 874,610.742256 874,614.125 C874,617.507744 870.418278,620.25 866,620.25 C864.901824,620.25 863.855328,620.080587 862.902667,619.774035 C861.343849,620.619428 858.296389,621.736418 858.296389,621.736418 C858.296389,621.736418 859.315604,619.438452 859.869393,618.060241 Z" id="Oval-44" sketch:type="MSShapeGroup"></path></g></g></g></svg>
-          span.comments= post.comments_count
+      each post in posts
+        .row.productlist
+          .col-md-1.upvote= post.score.toFixed(1)
+          .col-md-1.upvote= post.votes_count
+          .col-md-7
+            a.title(href=post.redirect_url)= post.name
+            .description= post.tagline
+          .col-md-2
+            a(href=post.user.profile_url, title=post.user.name)
+              img.img-circle(src=post.user.image_url["40px"], width="40px", height="40px", alt=post.user.name)
+          .col-md-1
+            svg(width="16px" height="14px" viewBox="0 0 16 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns")
+              g(id="Flow" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage")
+                g(sketch:type="MSArtboardGroup" transform="translate(-1183.000000, -853.000000)" fill="#BAB5B3" opacity="0.5")
+                  g(id="Posts" sketch:type="MSLayerGroup" transform="translate(325.000000, 245.000000)")
+                    path(d="M859.869393,618.060241 C858.702638,616.995887 858,615.623267 858,614.125 C858,610.742256 861.581722,608 866,608 C870.418278,608 874,610.742256 874,614.125 C874,617.507744 870.418278,620.25 866,620.25 C864.901824,620.25 863.855328,620.080587 862.902667,619.774035 C861.343849,620.619428 858.296389,621.736418 858.296389,621.736418 C858.296389,621.736418 859.315604,619.438452 859.869393,618.060241 Z" id="Oval-44" sketch:type="MSShapeGroup")
+            span.comments= post.comments_count

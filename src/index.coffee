@@ -174,10 +174,20 @@ updateUserAgent = (client, user, agentID, weights, callback) ->
   newAgent = makeAgent weights
   client.putAgent agentID, newAgent, callback
 
+userRequired = (req, res, next) ->
+  if req.user?
+    next()
+  else
+    req.session.returnTo = req.url
+    res.redirect '/', 303
+
 router.get '/', (req, res, next) ->
   if !req.user?
     res.render 'index', title: 'Your Personal Product Hunt Leaderboard'
   else
+    res.render 'home', title: "Today's Posts"
+
+router.get '/posts', userRequired, (req, res, next) ->
     start = last = Date.now()
     async.waterfall [
       (callback) ->
@@ -221,9 +231,7 @@ router.get '/', (req, res, next) ->
         now = Date.now()
         console.log "#{now - start} (#{now - last}) to sort posts"
         last = now
-        res.render 'home',
-          posts: posts
-          title: "Today's Posts"
+        res.json posts
 
 router.get '/about', (req, res, next) ->
   res.render 'about', title: 'About'
@@ -245,7 +253,7 @@ getWeights = (client, agentID, callback) ->
           weights[input] = parseFloat(weight)
       callback null, weights
 
-router.get '/settings', (req, res, next) ->
+router.get '/settings', userRequired, (req, res, next) ->
   getWeights req.app.fuzzyIO, req.agent, (err, weights) ->
     if err
       callback err
@@ -408,10 +416,20 @@ router.get '/authorized', (req, res, next) ->
           else
             console.log "Updated following for #{user.id}: #{following.length}"
 
-      res.redirect "/", 303
+      if req.session.returnTo
+        returnTo = req.session.returnTo
+        delete req.session.returnTo
+      else
+        returnTo = "/"
+
+      res.redirect returnTo, 303
 
 router.post '/logout', (req, res, next) ->
-  delete req.session.userID
+  if req.user
+    delete req.session.userID
+    req.user = null
+    req.token = null
+    req.agent = null
   res.redirect "/", 303
 
 module.exports = router
