@@ -1,5 +1,6 @@
 qs = require 'querystring'
 assert = require 'assert'
+crypto = require 'crypto'
 
 express = require 'express'
 async = require 'async'
@@ -14,13 +15,6 @@ UserAgent = require './useragent'
 JSON_TYPE = "application/json"
 
 router = express.Router()
-
-options =
-  max: 128000000
-  length: (n) -> return n.length
-  maxAge: 1000 * 60 * 60 * 24 * 30
-
-cache = LRU options
 
 lastPosts = null
 
@@ -42,6 +36,13 @@ getPostIDs = (token, callback) ->
           date: Date.now()
           ids: ids
         callback null, ids
+
+options =
+  max: 128000000
+  length: (n) -> return n.length
+  maxAge: 1000 * 60 * 60 * 24 * 30
+
+cache = LRU options
 
 cacheGet = (url, token, headers, callback) ->
   key = "#{token}|#{url}"
@@ -66,6 +67,38 @@ cacheGet = (url, token, headers, callback) ->
         body: body
       cache.set(key, JSON.stringify(entry))
       callback null, body
+
+scoreCacheOptions =
+  max: 8000000
+  length: (n) -> return n.length
+  maxAge: 1000 * 60 * 60 * 24 * 30
+
+scoreCache = LRU scoreCacheOptions
+
+md5Hash = (obj) ->
+  str = JSON.stringify obj
+  md5sum = crypto.createHash 'md5'
+  md5sum.update str
+  md5sum.digest 'hex'
+
+getCachedScore = (post, user, followings, agent) ->
+  postHash = md5Hash post
+  userHash = md5Hash user
+  followingsHash = md5Hash followings
+  agentHash = md5Hash agent
+  key = [postHash, userHash, followingsHash, agentHash].join("|")
+  if scoreCache.has(key)
+    return scoreCache.get(key)
+  else
+    return null
+
+setCachedScore = (post, user, followings, agent, score) ->
+  postHash = md5Hash post
+  userHash = md5Hash user
+  followingsHash = md5Hash followings
+  agentHash = md5Hash agent
+  key = [postHash, userHash, followingsHash, agentHash].join("|")
+  scoreCache.set(key, score)
 
 defaultAgent =
   inputs:
@@ -196,21 +229,28 @@ router.get '/posts', userRequired, (req, res, next) ->
               scorePost fullPost, callback
           ], callback
         scorePost = (post, callback) ->
-          inputs =
-            relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
-            relatedPostComments: _.filter(post.related_posts, (related) -> related?.current_user?.commented_on_post).length
-            followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
-            followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
-            followingComments: 0
-            totalUpvotes: post.votes_count
-            totalComments: post.comments_count
-          req.app.fuzzyIO.evaluate req.agent, inputs, (err, outputs) ->
-            if err
-              console.error err
-              callback err
-            else
-              post.score = outputs.score
-              callback null, post
+          score = getCachedScore post, req.user, followings, req.agent
+          if score?
+            post.score = score
+            callback null
+          else
+            inputs =
+              relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
+              relatedPostComments: _.filter(post.related_posts, (related) -> related?.current_user?.commented_on_post).length
+              followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
+              followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
+              followingComments: 0
+              totalUpvotes: post.votes_count
+              totalComments: post.comments_count
+            req.app.fuzzyIO.evaluate req.agent, inputs, (err, outputs) ->
+              if err
+                console.dir {agent: req.agent, message: "Error calling evaluate"}
+                console.error err
+                callback err
+              else
+                post.score = outputs.score
+                setCachedScore post, req.user, followings, req.agent, score
+                callback null, post
         downloadFullPost = (id, callback) ->
           token = req.token
           headers =
