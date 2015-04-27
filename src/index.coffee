@@ -37,12 +37,11 @@ getPostIDs = (token, callback) ->
         callback err
       else
         results = JSON.parse(body)
-        posts = _.map results.posts, (post) ->
-          _.pick post, ["id"]
+        ids = _.pluck results.posts, "id"
         lastPosts =
           date: Date.now()
-          ids: posts
-        callback null, posts
+          ids: ids
+        callback null, ids
 
 cacheGet = (url, token, headers, callback) ->
   key = "#{token}|#{url}"
@@ -179,21 +178,21 @@ router.get '/posts', userRequired, (req, res, next) ->
               else
                 callback null, following
           (callback) ->
-            getPostIDs req.token, (err, posts) ->
+            getPostIDs req.token, (err, ids) ->
               if err
                 callback err
               else
                 now = Date.now()
-                console.log "#{now - start} (#{now - last}) to get posts"
+                console.log "#{now - start} (#{now - last}) to get post ids"
                 last = now
-                callback null, posts
+                callback null, ids
         ], callback
       (results, callback) ->
-        [followings, posts] = results
-        downloadAndScore = (post, callback) ->
+        [followings, ids] = results
+        downloadAndScore = (id, callback) ->
           async.waterfall [
             (callback) ->
-              downloadFullPost post, callback
+              downloadFullPost id, callback
             (fullPost, callback) ->
               scorePost fullPost, callback
           ], callback
@@ -208,23 +207,24 @@ router.get '/posts', userRequired, (req, res, next) ->
             totalComments: post.comments_count
           req.app.fuzzyIO.evaluate req.agent, inputs, (err, outputs) ->
             if err
+              console.error err
               callback err
             else
               post.score = outputs.score
               callback null, post
-        downloadFullPost = (post, callback) ->
+        downloadFullPost = (id, callback) ->
           token = req.token
           headers =
             "Accept": JSON_TYPE
             "Authorization": "Bearer #{token}"
-          url = "https://api.producthunt.com/v1/posts/#{post.id}"
+          url = "https://api.producthunt.com/v1/posts/#{id}"
           cacheGet url, token, headers, (err, body) ->
             if err
               callback err
             else
               results = JSON.parse(body)
               callback null, results.post
-        async.map posts, downloadAndScore, callback
+        async.map ids, downloadAndScore, callback
     ], (err, scored) ->
       if err
         next err
