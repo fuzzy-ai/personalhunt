@@ -22,6 +22,28 @@ options =
 
 cache = LRU options
 
+lastPosts = null
+
+getPostIDs = (token, callback) ->
+  if lastPosts and (Date.now() - lastPosts.date < 1000 * 60)
+    callback null, lastPosts.ids
+  else
+    headers =
+      "Accept": JSON_TYPE
+      "Authorization": "Bearer #{token}"
+    url = "https://api.producthunt.com/v1/posts"
+    cacheGet url, token, headers, (err, body) ->
+      if err
+        callback err
+      else
+        results = JSON.parse(body)
+        posts = _.map results.posts, (post) ->
+          _.pick post, ["id"]
+        lastPosts =
+          date: Date.now()
+          ids: posts
+        callback null, posts
+
 cacheGet = (url, token, headers, callback) ->
   key = "#{token}|#{url}"
   entry = null
@@ -157,20 +179,14 @@ router.get '/posts', userRequired, (req, res, next) ->
               else
                 callback null, following
           (callback) ->
-            token = req.token
-            headers =
-              "Accept": JSON_TYPE
-              "Authorization": "Bearer #{token}"
-            url = "https://api.producthunt.com/v1/posts"
-            cacheGet url, token, headers, (err, body) ->
+            getPostIDs req.token, (err, posts) ->
               if err
                 callback err
               else
-                results = JSON.parse(body)
                 now = Date.now()
                 console.log "#{now - start} (#{now - last}) to get posts"
                 last = now
-                callback null, results.posts
+                callback null, posts
         ], callback
       (results, callback) ->
         [followings, posts] = results
