@@ -393,7 +393,7 @@ router.get '/authorized', (req, res, next) ->
       UserAgent.get user.id, (err, agent) ->
         if err
           if err.name == "NoSuchThingError"
-            makeDefaultUserAgent req.app.fuzzyIO, user.id, token, callback
+            makeDefaultUserAgent req.app.fuzzyIO, user.id, callback
           else
             callback err
         else

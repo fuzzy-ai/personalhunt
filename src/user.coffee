@@ -28,6 +28,10 @@ User.ensure = (props, callback) ->
     else if err
       callback err
     else
-      callback null, user
+      user.update props, (err, updated) ->
+        if err
+          callback err
+        else
+          callback null, updated
 
 module.exports = User
