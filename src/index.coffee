@@ -79,7 +79,7 @@ sortPosts = (db, client, agentID, posts, user, token, callback) ->
           else
             post.score = outputs.score
             callback null, post
-      async.mapLimit posts, 4, scorePost, (err, scored) ->
+      async.mapLimit posts, 16, scorePost, (err, scored) ->
         if err
           callback err
         else
