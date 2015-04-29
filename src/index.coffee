@@ -262,7 +262,7 @@ getWeights = (client, agentID, callback) ->
 router.get '/settings', userRequired, (req, res, next) ->
   getWeights req.app.fuzzyIO, req.agent, (err, weights) ->
     if err
-      callback err
+      next err
     else
       adjusted = {}
       for input, weight of weights
