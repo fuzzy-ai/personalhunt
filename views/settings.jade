@@ -8,9 +8,20 @@ block stylesheets
     }
 
 block content
+
   h1= title
 
+  if firstTime
+    p
+      | Welcome to PersonalHunt! You can use this tool to sort the products
+      | on ProductHunt according to your own experience, your social network, and
+      | the response from the whole PH community.
+
   p Which factors are most important to you?
+
+  if firstTime
+    p.pull-right
+      a(href="/") Skip &raquo;
 
   h3 You
 

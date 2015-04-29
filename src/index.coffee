@@ -259,7 +259,12 @@ getWeights = (client, agentID, callback) ->
           weights[input] = parseFloat(weight)
       callback null, weights
 
-router.get '/settings', userRequired, (req, res, next) ->
+startedFlag = (req, res, next) ->
+  req.startedFlag = true
+  next()
+
+showSettings = (req, res, next) ->
+  firstTime = req.startedFlag
   getWeights req.app.fuzzyIO, req.agent, (err, weights) ->
     if err
       next err
@@ -267,7 +272,13 @@ router.get '/settings', userRequired, (req, res, next) ->
       adjusted = {}
       for input, weight of weights
         adjusted[input] = weight * 100
-      res.render 'settings', {title: 'Settings', weights: adjusted}
+      res.render 'settings',
+        title: if firstTime then 'Get Started' else 'Settings'
+        firstTime: firstTime
+        weights: adjusted
+
+router.get '/getstarted', userRequired, startedFlag, showSettings
+router.get '/settings', userRequired, showSettings
 
 camelCase = (name) ->
   parts = name.split '-'
@@ -340,6 +351,8 @@ router.get '/authorized', (req, res, next) ->
 
   last = start = Date.now()
 
+  firstTime = null
+
   async.waterfall [
     (callback) ->
       params =
@@ -385,7 +398,19 @@ router.get '/authorized', (req, res, next) ->
           last = now
           callback null
     (callback) ->
-      User.ensure user, callback
+      User.get user.id, (err, got) ->
+        if err and err.name = "NoSuchThingError"
+          firstTime = true
+          User.create user, callback
+        else if err
+          callback err
+        else
+          firstTime = false
+          got.update user, (err, updated) ->
+            if err
+              callback err
+            else
+              callback null, updated
     (ensured, callback) ->
       now = Date.now()
       console.log "#{now - start} (#{now - last}) to get ensured"
@@ -425,6 +450,8 @@ router.get '/authorized', (req, res, next) ->
       if req.session.returnTo
         returnTo = req.session.returnTo
         delete req.session.returnTo
+      else if firstTime
+        returnTo = "/getstarted"
       else
         returnTo = "/"
 
