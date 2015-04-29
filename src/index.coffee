@@ -61,11 +61,7 @@ defaultAgent =
       high: [2, 3, 4]
       veryHigh: [3, 4]
     followingHunters:
-      veryLow: [0, 1]
-      low: [0, 1, 2]
-      medium: [1, 2, 3]
-      high: [2, 3, 4]
-      veryHigh: [3, 4]
+      high: [0, 1, 2]
     followingUpvotes:
       veryLow: [0, 12.5]
       low: [0, 12.5, 25]
@@ -106,12 +102,13 @@ for input, value of defaultAgent.inputs
 
 makeAgent = (weights) ->
   agent = _.cloneDeep(defaultAgent)
-  for input, value of agent.inputs
+  for input, inputSets of agent.inputs
     weight = weights[input]
-    for output, value of agent.outputs
-      for set in ['veryLow', 'low', 'medium', 'high', 'veryHigh']
-        rule = "IF #{input} IS #{set} THEN #{output} is #{set} WITH #{weight}"
-        agent.rules.push rule
+    for inputSet, inputShape of inputSets
+      for output, outputSets of agent.outputs
+        if _.has(outputSets, inputSet)
+          rule = "IF #{input} IS #{inputSet} THEN #{output} IS #{inputSet} WITH #{weight}"
+          agent.rules.push rule
   agent
 
 makeDefaultUserAgent = (client, user, callback) ->
