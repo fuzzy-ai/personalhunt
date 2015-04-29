@@ -38,7 +38,7 @@ block scripts
             .description= post.tagline
           .col-md-1
             a(href=post.user.profile_url, title=post.user.name)
-              img.img-circle(src=post.user.image_url["40px"], width="40px", height="40px", alt=post.user.name)
+              img.img-circle(src=post.user.image_url["40px"].replace(/^http:/, ''), width="40px", height="40px", alt=post.user.name)
           .col-md-1
             svg(width="16px" height="14px" viewBox="0 0 16 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns")
               g(id="Flow" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage")
