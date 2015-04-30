@@ -13,7 +13,9 @@ config =
   secret: process.env.SECRET or "bad secret"
   devToken: process.env.DEV_TOKEN
   fuzzyIOAPIKey: process.env.FUZZY_IO_API_KEY
-
+  logLevel: process.env.LOG_LEVEL or "info"
+  logFile: process.env.LOG_FILE or null
+  
 console.log "Creating app..."
 
 newApp config, (err, app) ->

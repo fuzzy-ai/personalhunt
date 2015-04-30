@@ -1,6 +1,7 @@
-extends layout
+extends ./layout.jade
 
 block content
-  h1= message
-  h2= error.status
-  pre #{error.stack}
+  .container
+    .row.main
+      h1 Error
+      p= err.message

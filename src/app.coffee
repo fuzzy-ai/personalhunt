@@ -6,13 +6,14 @@ urlFormat = require('url').format
 express = require 'express'
 session = require 'express-session'
 favicon = require 'static-favicon'
-logger = require 'morgan'
 cookieParser = require 'cookie-parser'
 bodyParser = require 'body-parser'
 {Databank, DatabankObject} = require('databank')
 async = require 'async'
 _ = require 'lodash'
 FuzzyIOClient = require 'fuzzy.io'
+Logger = require 'bunyan'
+uuid = require 'node-uuid'
 
 routes = require './index'
 AccessToken = require './accesstoken'
@@ -45,16 +46,56 @@ newApp = (config, callback) ->
 
     urlFormat props
 
+  setupLogger = (cfg) ->
+    logParams =
+      serializers:
+        req: Logger.stdSerializers.req
+        res: Logger.stdSerializers.res
+        err: Logger.stdSerializers.err
+      level: cfg.logLevel
+
+    if cfg.logFile
+        logParams.streams = [{path: cfg.logFile}]
+    else
+        logParams.streams = [{stream: process.stdout}]
+
+    logParams.name = "personalhunt"
+
+    log = new Logger logParams
+
+    log.debug "Initializing"
+
+    log
+
+  requestLogger = (req, res, next) ->
+    start = Date.now()
+    req.id = uuid.v4()
+    weblog = req.app.log.child({"req_id": req.id, "url": req.originalUrl, method: req.method, component: "web"})
+    end = res.end
+    req.log = weblog
+    res.end = (chunk, encoding) ->
+      res.end = end
+      res.end(chunk, encoding)
+      token = req.token
+      # Obfuscate the token
+      if token
+        token = token.slice(0, 4) + "..." + token.slice(-4)
+      rec = {req: req, res: res, user: req.user?.username, token: token, agent: req.agent}
+      weblog.info(rec, "Completed request.")
+    next()
+
   app.fuzzyIO = new FuzzyIOClient config.fuzzyIOAPIKey
 
   app.set 'port', config.port
+
+  app.log = setupLogger config
 
   # view engine setup
 
   app.set 'views', path.join(__dirname, '..', 'views')
   app.set 'view engine', 'jade'
+  app.use requestLogger
   app.use favicon(path.join(__dirname, '..', 'public', 'images', 'favicon.ico'))
-  app.use logger('dev')
   app.use bodyParser.json()
   app.use bodyParser.urlencoded()
   app.use cookieParser()
@@ -90,20 +131,21 @@ newApp = (config, callback) ->
 
   app.use (req, res, next) ->
     err = new Error('Not Found')
-    err.status = 404
-    next err
-    return
+    err.statusCode = 404
+    return next err
 
-  #/ error handlers
-  # development error handler
-  # will print stacktrace
+  # Error handler
 
   app.use (err, req, res, next) ->
-    res.status err.status or 500
-    res.render 'error',
-      message: err.message
-      error: err
-    return
+    if err.statusCode
+      res.statusCode = err.statusCode
+    else if err.name == "NoSuchThingError"
+      res.statusCode = 404
+    else
+      res.statusCode = 500
+    log = if req.log then req.log else req.app.log
+    log.error {err: err}, "Error"
+    res.render 'error', {err: err, title: "Error"}
 
   config.params.schema =
     User: User.schema
