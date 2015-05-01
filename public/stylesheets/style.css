@@ -121,6 +121,11 @@ body {
   padding-bottom: 1px;
 }
 
+.comments:hover {
+  text-decoration: underline;
+  text-decoration-color: #bbbbbb;
+}
+
 #logout {
 	margin-top: 8px;
 }

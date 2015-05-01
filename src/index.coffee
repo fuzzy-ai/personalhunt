@@ -236,7 +236,7 @@ router.get '/posts', userRequired, (req, res, next) ->
         scored = _.map scored, (post) ->
           post.user.image_url = _.pick post.user.image_url, ["40px"]
           post.user = _.pick post.user, ["profile_url", "name", "image_url"]
-          _.pick post, ["day", "score", "votes_count", "redirect_url", "name", "tagline", "user", "comments_count"]
+          _.pick post, ["day", "score", "votes_count", "redirect_url", "discussion_url", "name", "tagline", "user", "comments_count"]
         res.json scored
 
 router.get '/about', (req, res, next) ->
