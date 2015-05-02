@@ -56,7 +56,7 @@ cacheGet = (url, token, headers, callback) ->
     else if response.statusCode == 304
       callback null, entry.body
     else if response.statusCode != 200
-      callback new Error("Bad status code #{response.statusCode} getting posts: #{body}")
+      callback new Error("Bad status code #{response.statusCode} getting #{url}: #{body}")
     else
       key = "#{token}|#{url}"
       entry =
@@ -323,7 +323,7 @@ updateFollowing = (db, user, token, callback) ->
       if err
         callback err
       else if response.statusCode != 200
-        callback new Error("Bad status code #{response.statusCode}: #{body}")
+        callback new Error("Bad status code #{response.statusCode} getting #{url}: #{body}")
       else
         results = JSON.parse(body)
         page = _.pluck results.following, "id"
@@ -375,7 +375,7 @@ router.get '/authorized', (req, res, next) ->
         if err
           callback err
         else if response.statusCode != 200
-          err = new Error("Bad status code #{response.statusCode}: #{body}")
+          err = new Error("Bad status code #{response.statusCode} posting to #{url}: #{body}")
           callback err
         else
           results = JSON.parse(body)
@@ -385,11 +385,12 @@ router.get '/authorized', (req, res, next) ->
           last = now
           callback null
     (callback) ->
-      web.get 'https://api.producthunt.com/v1/me', {Authorization: "Bearer #{token}"}, (err, response, body) ->
+      url = 'https://api.producthunt.com/v1/me'
+      web.get url, {Authorization: "Bearer #{token}"}, (err, response, body) ->
         if err
           callback err
         else if response.statusCode != 200
-          callback new Error("Bad status code #{response.statusCode}: #{body}")
+          callback new Error("Bad status code #{response.statusCode} getting #{url}: #{body}")
         else
           results = JSON.parse(body)
           user = results.user
