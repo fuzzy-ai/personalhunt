@@ -24,22 +24,22 @@ block scripts
     .container
       .row.firstrow
         .col-md-1.col-xs-1.col-sm-1.score f.io
-        .col-md-1.col-xs-1.col-sm-1.score
+        .col-md-1.hidden-xs.col-sm-1.score
           span.uparrow
         .col-md-8.col-xs-9.col-sm-8
         .col-md-1.hidden-xs.col-sm-1
-        .col-md-1.col-xs-1.col-sm-1
+        .col-md-1.col-xs-2.col-sm-1.commentcol
       each post in posts
         .row.productlist.vertical-align
           .col-md-1.col-xs-1.col-sm-1.upvote= post.score.toFixed(1)
-          .col-md-1.col-xs-1.col-sm-1.upvote= post.votes_count
+          .col-md-1.hidden-xs.col-sm-1.upvote= post.votes_count
           .col-md-8.col-xs-9.col-sm-8
             a.title(href=post.redirect_url)= post.name
             .description= post.tagline
           .col-md-1.hidden-xs.col-sm-1
             a(href=post.user.profile_url, title=post.user.name)
               img.img-circle(src=post.user.image_url["40px"].replace(/^http:/, ''), width="40px", height="40px", alt=post.user.name)
-          .col-md-1.col-xs-1.col-sm-1
+          .col-md-1.col-xs-2.col-sm-1.commentcol
             a(href=post.discussion_url)
               svg(width="16px" height="14px" viewBox="0 0 16 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns")
                 g(id="Flow" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage")
