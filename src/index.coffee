@@ -175,7 +175,7 @@ router.get '/', (req, res, next) ->
   if !req.user?
     res.render 'index', title: 'Your Personal Product Hunt Leaderboard'
   else
-    res.render 'home', title: "Today's Posts"
+    res.render 'home', title: "Products You May Have Missed"
 
 router.get '/posts', userRequired, (req, res, next) ->
     start = last = Date.now()
