@@ -22,27 +22,6 @@ options =
 
 cache = LRU options
 
-lastPosts = null
-
-getPostIDs = (token, callback) ->
-  if lastPosts and (Date.now() - lastPosts.date < 1000 * 60)
-    callback null, lastPosts.ids
-  else
-    headers =
-      "Accept": JSON_TYPE
-      "Authorization": "Bearer #{token}"
-    url = "https://api.producthunt.com/v1/posts"
-    cacheGet url, token, headers, (err, body) ->
-      if err
-        callback err
-      else
-        results = JSON.parse(body)
-        ids = _.pluck results.posts, "id"
-        lastPosts =
-          date: Date.now()
-          ids: ids
-        callback null, ids
-
 cacheGet = (url, token, headers, callback) ->
   key = "#{token}|#{url}"
   entry = null
@@ -66,6 +45,40 @@ cacheGet = (url, token, headers, callback) ->
         body: body
       cache.set(key, JSON.stringify(entry))
       callback null, body
+
+ONE_DAY = 1000 * 60 * 60 * 24
+
+daysAgoToDate = (daysAgo) ->
+  now = Date.now()
+  midnightToday = now - (now % ONE_DAY)
+  midnightThatDay = midnightToday - (daysAgo * ONE_DAY)
+  thatDate = new Date(midnightThatDay)
+  thatDate.toISOString().substr(0, 10)
+
+lastPosts = {}
+
+getPostIDs = (token, daysAgo, callback) ->
+  day = daysAgoToDate daysAgo
+  if lastPosts[day] and (daysAgo > 0 || (Date.now() - lastPosts[day].date < 1000 * 60))
+    callback null, lastPosts[day].ids
+  else
+    headers =
+      "Accept": JSON_TYPE
+      "Authorization": "Bearer #{token}"
+    if daysAgo > 0
+      url = "https://api.producthunt.com/v1/posts?days_ago=#{daysAgo}"
+    else
+      url = "https://api.producthunt.com/v1/posts"
+    cacheGet url, token, headers, (err, body) ->
+      if err
+        callback err
+      else
+        results = JSON.parse(body)
+        ids = _.pluck results.posts, "id"
+        lastPosts[day] =
+          date: Date.now()
+          ids: ids
+        callback null, ids
 
 defaultAgent =
   inputs:
@@ -178,13 +191,20 @@ router.get '/posts', userRequired, (req, res, next) ->
               else
                 callback null, following
           (callback) ->
-            getPostIDs req.token, (err, ids) ->
+            getPostIDsForDay = (i, callback) ->
+              getPostIDs req.token, i, (err, ids) ->
+                if err
+                  callback err
+                else
+                  now = Date.now()
+                  console.log "#{now - start} (#{now - last}) to get post ids for #{i}"
+                  last = now
+                  callback null, ids
+            async.map [0..6], getPostIDsForDay, (err, idses) ->
               if err
                 callback err
               else
-                now = Date.now()
-                console.log "#{now - start} (#{now - last}) to get post ids"
-                last = now
+                ids = _.flatten idses
                 callback null, ids
         ], callback
       (results, callback) ->
@@ -194,7 +214,10 @@ router.get '/posts', userRequired, (req, res, next) ->
             (callback) ->
               downloadFullPost id, callback
             (fullPost, callback) ->
-              scorePost fullPost, callback
+              if fullPost?.current_user?.voted_for_post || fullPost?.current_user?.commented_on_post
+                callback null, null
+              else
+                scorePost fullPost, callback
           ], callback
         scorePost = (post, callback) ->
           inputs =
@@ -229,7 +252,12 @@ router.get '/posts', userRequired, (req, res, next) ->
       if err
         next err
       else
+        # Get rid of nulls
+        scored = _.filter scored
+        # Sort by descending score
         scored = _.sortByOrder scored, ["score"], [false]
+        # Take only top 20
+        scored = scored.slice 0, 20
         now = Date.now()
         console.log "#{now - start} (#{now - last}) to download and sort posts"
         last = now
