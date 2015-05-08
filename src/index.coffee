@@ -209,16 +209,6 @@ router.get '/posts', userRequired, (req, res, next) ->
         ], callback
       (results, callback) ->
         [followings, ids] = results
-        downloadAndScore = (id, callback) ->
-          async.waterfall [
-            (callback) ->
-              downloadFullPost id, callback
-            (fullPost, callback) ->
-              if fullPost?.current_user?.voted_for_post || fullPost?.current_user?.commented_on_post
-                callback null, null
-              else
-                scorePost fullPost, callback
-          ], callback
         scorePost = (post, callback) ->
           inputs =
             relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
@@ -235,6 +225,7 @@ router.get '/posts', userRequired, (req, res, next) ->
             else
               post.score = outputs.score
               callback null, post
+        q = async.queue scorePost, 64
         downloadFullPost = (id, callback) ->
           token = req.token
           headers =
@@ -247,6 +238,16 @@ router.get '/posts', userRequired, (req, res, next) ->
             else
               results = JSON.parse(body)
               callback null, results.post
+        downloadAndScore = (id, callback) ->
+          async.waterfall [
+            (callback) ->
+              downloadFullPost id, callback
+            (fullPost, callback) ->
+              if fullPost?.current_user?.voted_for_post || fullPost?.current_user?.commented_on_post
+                callback null, null
+              else
+                q.push fullPost, callback
+          ], callback
         async.map ids, downloadAndScore, callback
     ], (err, scored) ->
       if err
