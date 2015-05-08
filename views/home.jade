@@ -15,10 +15,16 @@ block scripts
 
     $(document).ready(function() {
       $('#waiting').spin();
-      $.get('/posts', function(posts) {
-        $('#waiting').replaceWith(tmpl('#posts-table-source', {posts: posts}));
-      });
+      $.get('/posts')
+        .done(function(posts) {
+          $('#waiting').replaceWith(tmpl('#posts-table-source', {posts: posts}));
+        })
+        .fail(function() {
+          $('#waiting').replaceWith(tmpl('#posts-error'));
+        });
     });
+  script#posts-error(type="application/x-jade").
+    p.text-center(style="vertical-align: middle") An error occured.
   script#posts-table-source(type="application/x-jade").
     p.date= (posts[0]) ? posts[0].day : ""
     .container
