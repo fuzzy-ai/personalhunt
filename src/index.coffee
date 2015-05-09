@@ -180,82 +180,83 @@ router.get '/', (req, res, next) ->
 router.get '/posts', userRequired, (req, res, next) ->
   async.waterfall [
     (callback) ->
-      req.app.db.read "UserFollowing", req.user.id, (err, following) ->
-        if err and err.name == "NoSuchThingError"
-          callback null, []
-        else if err
-          callback err
-        else
-          callback null, following
-    (followings, callback) ->
-      scorePost = (post, callback) ->
-        inputs =
-          relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
-          relatedPostComments: _.filter(post.related_posts, (related) -> related?.current_user?.commented_on_post).length
-          followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
-          followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
-          followingComments: 0
-          totalUpvotes: post.votes_count
-          totalComments: post.comments_count
+      async.parallel [
+        (callback) ->
+          req.app.db.read "UserFollowing", req.user.id, (err, following) ->
+            if err and err.name == "NoSuchThingError"
+              callback null, []
+            else if err
+              callback err
+            else
+              callback null, following
+        (callback) ->
+          downloadFullPost = (id, callback) ->
+            token = req.token
+            headers =
+              "Accept": JSON_TYPE
+              "Authorization": "Bearer #{token}"
+            url = "https://api.producthunt.com/v1/posts/#{id}"
+            start = Date.now()
+            cacheGet url, token, headers, (err, body) ->
+              if err
+                callback err
+              else
+                console.log "#{Date.now() - start} to get post with ID #{id}"
+                results = JSON.parse(body)
+                callback null, results.post
+          getPostsForDay = (i, callback) ->
+            async.waterfall [
+              (callback) ->
+                start = Date.now()
+                getPostIDs req.token, i, (err, ids) ->
+                  if err
+                    callback err
+                  else
+                    console.log "#{Date.now() - start} to get post ids for #{i}"
+                    callback null, ids
+              (ids, callback) ->
+                start = Date.now()
+                async.map ids, downloadFullPost, (err, posts) ->
+                  if err
+                    callback err
+                  else
+                    console.log "#{Date.now() - start} to download posts for #{i}"
+                    posts = _.filter posts, (post) ->
+                      !(post?.current_user?.voted_for_post || post?.current_user?.commented_on_post)
+                    callback null, posts
+            ], callback
+          async.map [0..6], getPostsForDay, (err, postses) ->
+            if err
+              callback err
+            else
+              posts = _.flatten postses
+              callback null, posts
+      ], callback
+    (results, callback) ->
+      [followings, posts] = results
+      scorePosts = (posts, callback) ->
+        inputses = []
+        for post in posts
+          inputs =
+            relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
+            relatedPostComments: _.filter(post.related_posts, (related) -> related?.current_user?.commented_on_post).length
+            followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
+            followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
+            followingComments: 0
+            totalUpvotes: post.votes_count
+            totalComments: post.comments_count
+          inputses.push inputs
         start = Date.now()
-        req.app.fuzzyIO.evaluate req.agent, inputs, (err, outputs) ->
+        req.app.fuzzyIO.evaluate req.agent, inputses, (err, outputses) ->
           if err
             console.error err
             callback err
           else
-            console.log "#{Date.now() - start} to score post with ID #{post.id}"
-            post.score = outputs.score
-            callback null, post
-      downloadFullPost = (id, callback) ->
-        token = req.token
-        headers =
-          "Accept": JSON_TYPE
-          "Authorization": "Bearer #{token}"
-        url = "https://api.producthunt.com/v1/posts/#{id}"
-        start = Date.now()
-        cacheGet url, token, headers, (err, body) ->
-          if err
-            callback err
-          else
-            console.log "#{Date.now() - start} to get post with ID #{id}"
-            results = JSON.parse(body)
-            callback null, results.post
-      downloadAndScore = (id, callback) ->
-        async.waterfall [
-          (callback) ->
-            downloadFullPost id, callback
-          (fullPost, callback) ->
-            if fullPost?.current_user?.voted_for_post || fullPost?.current_user?.commented_on_post
-              callback null, null
-            else
-              scorePost fullPost, callback
-        ], callback
-      getScoredPostsForDay = (i, callback) ->
-        async.waterfall [
-          (callback) ->
-            start = Date.now()
-            getPostIDs req.token, i, (err, ids) ->
-              if err
-                callback err
-              else
-                console.log "#{Date.now() - start} to get post ids for #{i}"
-                callback null, ids
-          (ids, callback) ->
-            start = Date.now()
-            async.map ids, downloadAndScore, (err, posts) ->
-              if err
-                callback err
-              else
-                console.log "#{Date.now() - start} to download and score posts for #{i}"
-                posts = _.filter posts
-                callback null, posts
-        ], callback
-      async.map [0..6], getScoredPostsForDay, (err, postses) ->
-        if err
-          callback err
-        else
-          posts = _.flatten posts
-          callback null, posts
+            console.log "#{Date.now() - start} to score #{posts.length} posts"
+            for post, i in posts
+              post.score = outputs[i].score
+            callback null, posts
+      scorePosts posts, callback
   ], (err, scored) ->
     if err
       next err
