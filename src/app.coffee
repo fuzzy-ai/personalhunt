@@ -20,6 +20,7 @@ AccessToken = require './accesstoken'
 User = require './user'
 Post = require './post'
 UserAgent = require './useragent'
+CacheItem = require './cacheitem'
 
 newApp = (config, callback) ->
 
@@ -152,6 +153,7 @@ newApp = (config, callback) ->
     Post: Post.schema
     AccessToken: AccessToken.schema
     UserAgent: UserAgent.schema
+    CacheItem: CacheItem.schema
 
   app.start = (callback) ->
     async.waterfall [

@@ -4,47 +4,46 @@ assert = require 'assert'
 express = require 'express'
 async = require 'async'
 _ = require 'lodash'
-LRU = require 'lru-cache'
 
 web = require './web'
 User = require './user'
 AccessToken = require './accesstoken'
 UserAgent = require './useragent'
+CacheItem = require './cacheitem'
 
 JSON_TYPE = "application/json"
 
 router = express.Router()
 
-options =
-  max: 128000000
-  length: (n) -> return n.length
-  maxAge: 1000 * 60 * 60 * 24 * 30
-
-cache = LRU options
+THIRTY_MINUTES = 30 * 60 * 1000
 
 cacheGet = (url, token, headers, callback) ->
-  key = "#{token}|#{url}"
-  entry = null
-  if cache.has(key)
-    entry = JSON.parse(cache.get(key))
-    if entry.etag
-      headers["If-None-Match"] = entry.etag
-  web.get url, headers, (err, response, body) ->
+  CacheItem.byUrlAndToken url, token, (err, cacheItem) ->
     if err
       callback err
-    else if response.statusCode == 304
-      callback null, entry.body
-    else if response.statusCode != 200
-      callback new Error("Bad status code #{response.statusCode} getting #{url}: #{body}")
     else
-      key = "#{token}|#{url}"
-      entry =
-        url: url
-        token: token
-        etag: response.headers.etag
-        body: body
-      cache.set(key, JSON.stringify(entry))
-      callback null, body
+      if cacheItem && Date.parse(cacheItem.updatedAt) > Date.now() - THIRTY_MINUTES
+        callback null, cacheItem.body
+      else
+        if cacheItem
+          headers["If-None-Match"] = cacheItem.etag
+        web.get url, headers, (err, response, body) ->
+          if err
+            callback err
+          else if response.statusCode == 304
+            callback null, cacheItem.body
+          else if response.statusCode != 200
+            callback new Error("Bad status code #{response.statusCode} getting #{url}: #{body}")
+          else
+            if !cacheItem?
+              cacheItem = new CacheItem({url: url, token: token})
+            cacheItem.etag = response.headers.etag
+            cacheItem.body = body
+            cacheItem.save (err, saved) ->
+              if err
+                callback err
+              else
+                callback null, body
 
 ONE_DAY = 1000 * 60 * 60 * 24
 
@@ -254,7 +253,7 @@ router.get '/posts', userRequired, (req, res, next) ->
           else
             console.log "#{Date.now() - start} to score #{posts.length} posts"
             for post, i in posts
-              post.score = outputs[i].score
+              post.score = outputses[i].score
             callback null, posts
       scorePosts posts, callback
   ], (err, scored) ->
