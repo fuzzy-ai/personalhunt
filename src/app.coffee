@@ -80,7 +80,7 @@ newApp = (config, callback) ->
       # Obfuscate the token
       if token
         token = token.slice(0, 4) + "..." + token.slice(-4)
-      rec = {req: req, res: res, user: req.user?.username, token: token, agent: req.agent}
+      rec = {elapsed: Date.now() - start, req: req, res: res, user: req.user?.username, token: token, agent: req.agent}
       weblog.info(rec, "Completed request.")
     next()
 

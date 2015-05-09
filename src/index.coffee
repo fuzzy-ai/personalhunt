@@ -178,95 +178,97 @@ router.get '/', (req, res, next) ->
     res.render 'home', title: "Products You May Have Missed"
 
 router.get '/posts', userRequired, (req, res, next) ->
-    start = last = Date.now()
-    async.waterfall [
-      (callback) ->
-        async.parallel [
+  async.waterfall [
+    (callback) ->
+      req.app.db.read "UserFollowing", req.user.id, (err, following) ->
+        if err and err.name == "NoSuchThingError"
+          callback null, []
+        else if err
+          callback err
+        else
+          callback null, following
+    (followings, callback) ->
+      scorePost = (post, callback) ->
+        inputs =
+          relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
+          relatedPostComments: _.filter(post.related_posts, (related) -> related?.current_user?.commented_on_post).length
+          followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
+          followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
+          followingComments: 0
+          totalUpvotes: post.votes_count
+          totalComments: post.comments_count
+        start = Date.now()
+        req.app.fuzzyIO.evaluate req.agent, inputs, (err, outputs) ->
+          if err
+            console.error err
+            callback err
+          else
+            console.log "#{Date.now() - start} to score post with ID #{post.id}"
+            post.score = outputs.score
+            callback null, post
+      downloadFullPost = (id, callback) ->
+        token = req.token
+        headers =
+          "Accept": JSON_TYPE
+          "Authorization": "Bearer #{token}"
+        url = "https://api.producthunt.com/v1/posts/#{id}"
+        start = Date.now()
+        cacheGet url, token, headers, (err, body) ->
+          if err
+            callback err
+          else
+            console.log "#{Date.now() - start} to get post with ID #{id}"
+            results = JSON.parse(body)
+            callback null, results.post
+      downloadAndScore = (id, callback) ->
+        async.waterfall [
           (callback) ->
-            req.app.db.read "UserFollowing", req.user.id, (err, following) ->
-              if err and err.name == "NoSuchThingError"
-                callback null, []
-              else if err
-                callback err
-              else
-                callback null, following
+            downloadFullPost id, callback
+          (fullPost, callback) ->
+            if fullPost?.current_user?.voted_for_post || fullPost?.current_user?.commented_on_post
+              callback null, null
+            else
+              scorePost fullPost, callback
+        ], callback
+      getScoredPostsForDay = (i, callback) ->
+        async.waterfall [
           (callback) ->
-            getPostIDsForDay = (i, callback) ->
-              getPostIDs req.token, i, (err, ids) ->
-                if err
-                  callback err
-                else
-                  now = Date.now()
-                  console.log "#{now - start} (#{now - last}) to get post ids for #{i}"
-                  last = now
-                  callback null, ids
-            async.map [0..6], getPostIDsForDay, (err, idses) ->
+            start = Date.now()
+            getPostIDs req.token, i, (err, ids) ->
               if err
                 callback err
               else
-                ids = _.flatten idses
+                console.log "#{Date.now() - start} to get post ids for #{i}"
                 callback null, ids
-        ], callback
-      (results, callback) ->
-        [followings, ids] = results
-        scorePost = (post, callback) ->
-          inputs =
-            relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
-            relatedPostComments: _.filter(post.related_posts, (related) -> related?.current_user?.commented_on_post).length
-            followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
-            followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
-            followingComments: 0
-            totalUpvotes: post.votes_count
-            totalComments: post.comments_count
-          req.app.fuzzyIO.evaluate req.agent, inputs, (err, outputs) ->
-            if err
-              console.error err
-              callback err
-            else
-              post.score = outputs.score
-              callback null, post
-        q = async.queue scorePost, 64
-        downloadFullPost = (id, callback) ->
-          token = req.token
-          headers =
-            "Accept": JSON_TYPE
-            "Authorization": "Bearer #{token}"
-          url = "https://api.producthunt.com/v1/posts/#{id}"
-          cacheGet url, token, headers, (err, body) ->
-            if err
-              callback err
-            else
-              results = JSON.parse(body)
-              callback null, results.post
-        downloadAndScore = (id, callback) ->
-          async.waterfall [
-            (callback) ->
-              downloadFullPost id, callback
-            (fullPost, callback) ->
-              if fullPost?.current_user?.voted_for_post || fullPost?.current_user?.commented_on_post
-                callback null, null
+          (ids, callback) ->
+            start = Date.now()
+            async.map ids, downloadAndScore, (err, posts) ->
+              if err
+                callback err
               else
-                q.push fullPost, callback
-          ], callback
-        async.map ids, downloadAndScore, callback
-    ], (err, scored) ->
-      if err
-        next err
-      else
-        # Get rid of nulls
-        scored = _.filter scored
-        # Sort by descending score
-        scored = _.sortByOrder scored, ["score"], [false]
-        # Take only top 20
-        scored = scored.slice 0, 20
-        now = Date.now()
-        console.log "#{now - start} (#{now - last}) to download and sort posts"
-        last = now
-        scored = _.map scored, (post) ->
-          post.user.image_url = _.pick post.user.image_url, ["40px"]
-          post.user = _.pick post.user, ["profile_url", "name", "image_url"]
-          _.pick post, ["day", "score", "votes_count", "redirect_url", "discussion_url", "name", "tagline", "user", "comments_count"]
-        res.json scored
+                console.log "#{Date.now() - start} to download and score posts for #{i}"
+                posts = _.filter posts
+                callback null, posts
+        ], callback
+      async.map [0..6], getScoredPostsForDay, (err, postses) ->
+        if err
+          callback err
+        else
+          posts = _.flatten posts
+          callback null, posts
+  ], (err, scored) ->
+    if err
+      next err
+    else
+      # Sort by descending score
+      scored = _.sortByOrder scored, ["score"], [false]
+      # Take only top 20
+      scored = scored.slice 0, 20
+      scored = _.map scored, (post) ->
+        post.user.image_url = _.pick post.user.image_url, ["40px"]
+        post.user = _.pick post.user, ["profile_url", "name", "image_url"]
+        _.pick post, ["day", "score", "votes_count", "redirect_url", "discussion_url", "name", "tagline", "user", "comments_count"]
+      res.json scored
 
 router.get '/about', (req, res, next) ->
   res.render 'about', title: 'About'
