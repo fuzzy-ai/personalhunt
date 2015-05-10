@@ -10,6 +10,7 @@ User = require './user'
 AccessToken = require './accesstoken'
 UserAgent = require './useragent'
 CacheItem = require './cacheitem'
+ClientOnlyToken = require './clientonlytoken'
 
 JSON_TYPE = "application/json"
 
@@ -170,13 +171,61 @@ userRequired = (req, res, next) ->
     req.session.returnTo = req.url
     res.redirect '/', 303
 
+ONE_HOUR = 1000 * 60 * 60
+
+# Gets a cached client-only token, or gets one from Product Hunt if needed
+
+clientOnlyToken = (req, res, next) ->
+  {clientID, clientSecret} = req.app.config
+  ClientOnlyToken.get clientID, (err, cot) ->
+    if err && err.name != "NoSuchThingError"
+      next err
+    else
+      if cot && Date.parse(cot.expiresAt) < Date.now() + ONE_HOUR
+        req.clientOnlyToken = cot.token
+        next()
+      else
+        params =
+          client_id: clientID
+          client_secret: clientSecret
+          grant_type: "client_credentials"
+
+        payload = JSON.stringify params
+
+        headers =
+          "Accept": JSON_TYPE
+          "Content-Type": JSON_TYPE
+          "Content-Length": Buffer.byteLength payload
+
+        url = 'https://api.producthunt.com/v1/oauth/token'
+
+        web.post url, headers, payload, (err, response, body) ->
+          if err
+            next err
+          else if response.statusCode != 200
+            err = new Error("Bad status code #{response.statusCode} posting to #{url}: #{body}")
+            next err
+          else
+            results = JSON.parse(body)
+            if !cot?
+              cot = new ClientOnlyToken({clientID: clientID})
+            cot.token = results.access_token
+            # XXX: expiration in seconds or milliseconds?
+            cot.expiresAt = (new Date(Date.now() + (results.expires_in * 1000))).toISOString()
+            cot.save (err) ->
+              if err
+                next err
+              else
+                req.clientOnlyToken = cot.token
+                next()
+
 router.get '/', (req, res, next) ->
   if !req.user?
     res.render 'index', title: 'Your Personal Product Hunt Leaderboard'
   else
     res.render 'home', title: "Products You May Have Missed"
 
-router.get '/posts', userRequired, (req, res, next) ->
+router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
   async.waterfall [
     (callback) ->
       async.parallel [
@@ -190,7 +239,7 @@ router.get '/posts', userRequired, (req, res, next) ->
               callback null, following
         (callback) ->
           downloadFullPost = (id, callback) ->
-            token = req.token
+            token = req.clientOnlyToken
             headers =
               "Accept": JSON_TYPE
               "Authorization": "Bearer #{token}"
@@ -207,7 +256,7 @@ router.get '/posts', userRequired, (req, res, next) ->
             async.waterfall [
               (callback) ->
                 start = Date.now()
-                getPostIDs req.token, i, (err, ids) ->
+                getPostIDs req.clientOnlyToken, i, (err, ids) ->
                   if err
                     callback err
                   else
