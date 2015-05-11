@@ -14,6 +14,7 @@ _ = require 'lodash'
 FuzzyIOClient = require 'fuzzy.io'
 Logger = require 'bunyan'
 uuid = require 'node-uuid'
+web = require 'fuzzy.io-web'
 
 routes = require './index'
 AccessToken = require './accesstoken'
@@ -158,6 +159,9 @@ newApp = (config, callback) ->
     ClientOnlyToken: ClientOnlyToken.schema
 
   app.start = (callback) ->
+    # Initialize agents
+    FuzzyIOClient.start()
+    web.start()
     async.waterfall [
       (callback) =>
         console.log "Connecting to databank..."

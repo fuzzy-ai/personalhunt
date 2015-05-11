@@ -4,8 +4,8 @@ assert = require 'assert'
 express = require 'express'
 async = require 'async'
 _ = require 'lodash'
+web = require 'fuzzy.io-web'
 
-web = require './web'
 User = require './user'
 AccessToken = require './accesstoken'
 UserAgent = require './useragent'
@@ -23,7 +23,6 @@ cacheGet = (url, token, headers, callback) ->
     if err
       callback err
     else
-      console.dir {url: url, token: token, cacheItem: cacheItem}
       if cacheItem && (Date.parse(cacheItem.updatedAt) > (Date.now() - THIRTY_MINUTES))
         callback null, cacheItem.body
       else
@@ -45,7 +44,6 @@ cacheGet = (url, token, headers, callback) ->
               if err
                 callback err
               else
-                console.dir {url: url, token: token, cacheItem: cacheItem}
                 callback null, body
 
 ONE_DAY = 1000 * 60 * 60 * 24
