@@ -76,6 +76,9 @@ defaultAgent =
       veryHigh: [3, 4]
     followingHunters:
       high: [0, 1, 2]
+    followingMakers:
+      high: [0, 1, 2]
+      veryHigh: [1, 2]
     followingUpvotes:
       veryLow: [0, 12.5]
       low: [0, 12.5, 25]
@@ -290,6 +293,7 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
             followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
             followingUpvotes: _.intersection(followings, voters(post)).length
             followingComments: _.intersection(followings, commenters(post)).length
+            followingMakers: _.intersection(followings, _.pluck(post.makers, "id")).length
             totalUpvotes: post.votes_count
             totalComments: post.comments_count
           inputses.push inputs
