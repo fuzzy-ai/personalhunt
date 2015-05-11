@@ -34,18 +34,16 @@ cacheGet = (url, token, headers, callback) ->
             callback err
           else if response.statusCode == 304
             callback null, cacheItem.body
-          else if response.statusCode != 200
-            callback new Error("Bad status code #{response.statusCode} getting #{url}: #{body}")
           else
-            if !cacheItem?
-              cacheItem = new CacheItem({url: url, token: token})
-            cacheItem.etag = response.headers.etag
-            cacheItem.body = body
-            cacheItem.save (err, saved) ->
-              if err
-                callback err
-              else
-                callback null, body
+            setImmediate ->
+              if !cacheItem?
+                cacheItem = new CacheItem({url: url, token: token})
+              cacheItem.etag = response.headers.etag
+              cacheItem.body = body
+              cacheItem.save (err, saved) ->
+                if err
+                  console.error err
+            callback null, body
 
 ONE_DAY = 1000 * 60 * 60 * 24
 
@@ -163,7 +161,7 @@ clientOnlyToken = (req, res, next) ->
     if err && err.name != "NoSuchThingError"
       next err
     else
-      if cot && Date.parse(cot.expiresAt) < Date.now() + ONE_HOUR
+      if cot && Date.parse(cot.expiresAt) > (Date.now() + ONE_HOUR)
         req.clientOnlyToken = cot.token
         next()
       else
@@ -226,31 +224,31 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
               "Accept": JSON_TYPE
               "Authorization": "Bearer #{token}"
             url = "https://api.producthunt.com/v1/posts/#{id}"
-            start = Date.now()
+            dfpstart = Date.now()
             cacheGet url, token, headers, (err, body) ->
               if err
                 callback err
               else
-                console.log "#{Date.now() - start} to get post with ID #{id}"
+                console.log "#{Date.now() - dfpstart} to get post with ID #{id}"
                 results = JSON.parse(body)
                 callback null, results.post
           getPostsForDay = (day, callback) ->
             async.waterfall [
               (callback) ->
-                start = Date.now()
+                gpidsstart = Date.now()
                 getPostIDs req.clientOnlyToken, day, (err, ids) ->
                   if err
                     callback err
                   else
-                    console.log "#{Date.now() - start} to get post ids for #{day}"
+                    console.log "#{Date.now() - gpidsstart} to get post ids for #{day}"
                     callback null, ids
               (ids, callback) ->
-                start = Date.now()
+                mdfpstart = Date.now()
                 async.map ids, downloadFullPost, (err, posts) ->
                   if err
                     callback err
                   else
-                    console.log "#{Date.now() - start} to download posts for #{day}"
+                    console.log "#{Date.now() - mdfpstart} to download posts for #{day}"
                     posts = _.filter posts, (post) ->
                       !(post?.current_user?.voted_for_post || post?.current_user?.commented_on_post)
                     callback null, posts
@@ -281,13 +279,13 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
             totalUpvotes: post.votes_count
             totalComments: post.comments_count
           inputses.push inputs
-        start = Date.now()
+        spstart = Date.now()
         req.app.fuzzyIO.evaluate req.agent, inputses, (err, outputses) ->
           if err
             console.error err
             callback err
           else
-            console.log "#{Date.now() - start} to score #{posts.length} posts"
+            console.log "#{Date.now() - spstart} to score #{posts.length} posts"
             for post, i in posts
               post.score = outputses[i].score
             callback null, posts
