@@ -206,6 +206,20 @@ router.get '/', (req, res, next) ->
     res.render 'home', title: "Products You May Have Missed"
 
 router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
+
+  voters = (post) ->
+    _.pluck(post.votes, "user_id")
+  commenters = (post) ->
+    commentersInArray = (comments) ->
+      _.union(_.flatten(_.map(comments, commentersInComment)))
+    commentersInComment = (comment) ->
+      _.union [comment.user_id], commentersInArray(comment.child_comments)
+    commentersInArray post.comments
+  votedFor = (user, post) ->
+    voters(post).indexOf(user.id) != -1
+  commentedOn = (user, post) ->
+    commenters(post).indexOf(user.id) != -1
+
   async.waterfall [
     (callback) ->
       async.parallel [
@@ -250,7 +264,7 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
                   else
                     console.log "#{Date.now() - mdfpstart} to download posts for #{day}"
                     posts = _.filter posts, (post) ->
-                      !(post?.current_user?.voted_for_post || post?.current_user?.commented_on_post)
+                      !(votedFor(req.user, post) || commentedOn(req.user, post))
                     callback null, posts
             ], callback
           daysAgoToSFDay = (i) ->
@@ -271,11 +285,11 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
         inputses = []
         for post in posts
           inputs =
-            relatedPostUpvotes: _.filter(post.related_posts, (related) -> related?.current_user?.voted_for_post).length
-            relatedPostComments: _.filter(post.related_posts, (related) -> related?.current_user?.commented_on_post).length
+            relatedPostUpvotes: _.filter(post.related_posts, (related) -> votedFor(req.user, related)).length
+            relatedPostComments: _.filter(post.related_posts, (related) -> commentedOn(req.user, related)).length
             followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
-            followingUpvotes: _.filter(post.votes, (vote) -> followings.indexOf(vote.user_id) != -1).length
-            followingComments: 0
+            followingUpvotes: _.intersection(followings, voters(post)).length
+            followingComments: _.intersection(followings, commenters(post)).length
             totalUpvotes: post.votes_count
             totalComments: post.comments_count
           inputses.push inputs
