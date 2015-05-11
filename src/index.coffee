@@ -5,6 +5,7 @@ express = require 'express'
 async = require 'async'
 _ = require 'lodash'
 web = require 'fuzzy.io-web'
+moment = require 'moment-timezone'
 
 User = require './user'
 AccessToken = require './accesstoken'
@@ -48,37 +49,18 @@ cacheGet = (url, token, headers, callback) ->
 
 ONE_DAY = 1000 * 60 * 60 * 24
 
-daysAgoToDate = (daysAgo) ->
-  now = Date.now()
-  midnightToday = now - (now % ONE_DAY)
-  midnightThatDay = midnightToday - (daysAgo * ONE_DAY)
-  thatDate = new Date(midnightThatDay)
-  thatDate.toISOString().substr(0, 10)
-
-lastPosts = {}
-
-getPostIDs = (token, daysAgo, callback) ->
-  day = daysAgoToDate daysAgo
-  if lastPosts[day] and (daysAgo > 0 || (Date.now() - lastPosts[day].date < 1000 * 60))
-    callback null, lastPosts[day].ids
-  else
-    headers =
-      "Accept": JSON_TYPE
-      "Authorization": "Bearer #{token}"
-    if daysAgo > 0
-      url = "https://api.producthunt.com/v1/posts?days_ago=#{daysAgo}"
+getPostIDs = (token, day, callback) ->
+  headers =
+    "Accept": JSON_TYPE
+    "Authorization": "Bearer #{token}"
+  url = "https://api.producthunt.com/v1/posts?day=#{day}"
+  cacheGet url, token, headers, (err, body) ->
+    if err
+      callback err
     else
-      url = "https://api.producthunt.com/v1/posts"
-    cacheGet url, token, headers, (err, body) ->
-      if err
-        callback err
-      else
-        results = JSON.parse(body)
-        ids = _.pluck results.posts, "id"
-        lastPosts[day] =
-          date: Date.now()
-          ids: ids
-        callback null, ids
+      results = JSON.parse(body)
+      ids = _.pluck results.posts, "id"
+      callback null, ids
 
 defaultAgent =
   inputs:
@@ -252,15 +234,15 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
                 console.log "#{Date.now() - start} to get post with ID #{id}"
                 results = JSON.parse(body)
                 callback null, results.post
-          getPostsForDay = (i, callback) ->
+          getPostsForDay = (day, callback) ->
             async.waterfall [
               (callback) ->
                 start = Date.now()
-                getPostIDs req.clientOnlyToken, i, (err, ids) ->
+                getPostIDs req.clientOnlyToken, day, (err, ids) ->
                   if err
                     callback err
                   else
-                    console.log "#{Date.now() - start} to get post ids for #{i}"
+                    console.log "#{Date.now() - start} to get post ids for #{day}"
                     callback null, ids
               (ids, callback) ->
                 start = Date.now()
@@ -268,12 +250,17 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
                   if err
                     callback err
                   else
-                    console.log "#{Date.now() - start} to download posts for #{i}"
+                    console.log "#{Date.now() - start} to download posts for #{day}"
                     posts = _.filter posts, (post) ->
                       !(post?.current_user?.voted_for_post || post?.current_user?.commented_on_post)
                     callback null, posts
             ], callback
-          async.map [0..6], getPostsForDay, (err, postses) ->
+          daysAgoToSFDay = (i) ->
+            now = Date.now()
+            ms = now - i * ONE_DAY
+            moment(ms).tz('America/Los_Angeles').format('YYYY-MM-DD')
+          days = _.map([0..6], daysAgoToSFDay)
+          async.map days, getPostsForDay, (err, postses) ->
             if err
               callback err
             else
