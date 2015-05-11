@@ -222,6 +222,12 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
     voters(post).indexOf(user.id) != -1
   commentedOn = (user, post) ->
     commenters(post).indexOf(user.id) != -1
+  daysAgoToSFDay = (i) ->
+    now = Date.now()
+    ms = now - i * ONE_DAY
+    moment(ms).tz('America/Los_Angeles').format('YYYY-MM-DD')
+
+  days = _.map([0..6], daysAgoToSFDay)
 
   async.waterfall [
     (callback) ->
@@ -270,11 +276,6 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
                       !(votedFor(req.user, post) || commentedOn(req.user, post))
                     callback null, posts
             ], callback
-          daysAgoToSFDay = (i) ->
-            now = Date.now()
-            ms = now - i * ONE_DAY
-            moment(ms).tz('America/Los_Angeles').format('YYYY-MM-DD')
-          days = _.map([0..6], daysAgoToSFDay)
           async.map days, getPostsForDay, (err, postses) ->
             if err
               callback err
@@ -320,7 +321,7 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
         post.user.image_url = _.pick post.user.image_url, ["40px"]
         post.user = _.pick post.user, ["profile_url", "name", "image_url"]
         _.pick post, ["day", "score", "votes_count", "redirect_url", "discussion_url", "name", "tagline", "user", "comments_count"]
-      res.json scored
+      res.json {days: days, posts: scored}
 
 router.get '/about', (req, res, next) ->
   res.render 'about', title: 'About'

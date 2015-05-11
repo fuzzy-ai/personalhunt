@@ -16,8 +16,11 @@ block scripts
     $(document).ready(function() {
       $('#waiting').spin();
       $.get('/posts')
-        .done(function(posts) {
-          $('#waiting').replaceWith(tmpl('#posts-table-source', {posts: posts}));
+        .done(function(results) {
+          var posts = results.posts;
+          var days = results.days;
+          console.log(JSON.stringify(results.days));
+          $('#waiting').replaceWith(tmpl('#posts-table-source', {posts: posts, days: days}));
         })
         .fail(function() {
           $('#waiting').replaceWith(tmpl('#posts-error'));
@@ -26,7 +29,10 @@ block scripts
   script#posts-error(type="application/x-jade").
     p.text-center(style="vertical-align: middle") An error occured.
   script#posts-table-source(type="application/x-jade").
-    p.date= (posts[0]) ? posts[0].day : ""
+    p.date
+      span= days[6]
+      | -
+      span= days[0]
     .container
       .row.firstrow
         .col-md-1.col-xs-1.col-sm-1.score f.io
