@@ -23,7 +23,8 @@ cacheGet = (url, token, headers, callback) ->
     if err
       callback err
     else
-      if cacheItem && Date.parse(cacheItem.updatedAt) > Date.now() - THIRTY_MINUTES
+      console.dir {url: url, token: token, cacheItem: cacheItem}
+      if cacheItem && (Date.parse(cacheItem.updatedAt) > (Date.now() - THIRTY_MINUTES))
         callback null, cacheItem.body
       else
         if cacheItem
@@ -44,6 +45,7 @@ cacheGet = (url, token, headers, callback) ->
               if err
                 callback err
               else
+                console.dir {url: url, token: token, cacheItem: cacheItem}
                 callback null, body
 
 ONE_DAY = 1000 * 60 * 60 * 24

@@ -15,26 +15,26 @@ CacheItem.schema =
     "updatedAt"
   ]
 
-CacheItem.create = (props, callback) ->
-  props.key = "#{token}|#{url}"
+CacheItem.beforeCreate = (props, callback) ->
+  props.urlAndToken = "#{token}|#{url}"
   props.createdAt = props.updatedAt = (new Date()).toISOString()
   callback null, props
 
-CacheItem::update = (props, callback) ->
+CacheItem::beforeUpdate = (props, callback) ->
   props.updatedAt = (new Date()).toISOString()
   callback null, props
 
-CacheItem::save = (callback) ->
-  if !@key
-    @key = "#{@token}|#{@url}"
+CacheItem::beforeSave = (callback) ->
+  if !@urlAndToken
+    @urlAndToken = "#{@token}|#{@url}"
   @updatedAt = (new Date()).toISOString()
   if !@createdAt
     @createdAt = @updatedAt
   callback null
 
 CacheItem.byUrlAndToken = (url, token, callback) ->
-  key = "#{token}|#{url}"
-  CacheItem.get key, (err, cacheItem) ->
+  urlAndToken = "#{token}|#{url}"
+  CacheItem.get urlAndToken, (err, cacheItem) ->
     if err
       if err.name == "NoSuchThingError"
         callback null, null
