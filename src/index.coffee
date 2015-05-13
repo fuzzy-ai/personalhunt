@@ -12,6 +12,7 @@ AccessToken = require './accesstoken'
 UserAgent = require './useragent'
 CacheItem = require './cacheitem'
 ClientOnlyToken = require './clientonlytoken'
+SavedScore = require './savedscore'
 
 JSON_TYPE = "application/json"
 
@@ -134,7 +135,7 @@ makeDefaultUserAgent = (client, user, callback) ->
     (callback) ->
       client.newAgent agent, callback
     (agent, callback) ->
-      UserAgent.create {user: user, agent: agent.id}, callback
+      UserAgent.create {user: user, agent: agent.id, version: agent.latestVersion}, callback
   ], callback
 
 updateUserAgent = (client, user, agentID, weights, callback) ->
@@ -145,7 +146,20 @@ updateUserAgent = (client, user, agentID, weights, callback) ->
   assert.ok _.isObject(weights), "#{weights} is not an object"
 
   newAgent = makeAgent weights
-  client.putAgent agentID, newAgent, callback
+
+  updated = null
+
+  async.waterfall [
+    (callback) ->
+      client.putAgent agentID, newAgent, callback
+    (results, callback) ->
+      updated = results
+      UserAgent.get user.id, callback
+    (ua, callback) ->
+      ua.version = updated.latestVersion
+      ua.save callback
+  ], (err) ->
+    callback err
 
 userRequired = (req, res, next) ->
   if req.user?
@@ -281,10 +295,26 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
       ], callback
     (results, callback) ->
       [followings, posts] = results
+      getSavedScores = (inputses, version, callback) ->
+        idMap = {}
+        for postID, inputs of inputses
+          key = SavedScore.makeKey postID, inputs, version
+          idMap[key] = postID
+        SavedScore.readAll _.keys(idMap), (err, savedScores) ->
+          if err
+            callback err
+          else
+            scoreMap = {}
+            for key, savedScore of savedScores
+              scoreMap[idMap[key]] = savedScore?.outputs?.score
+            callback null, scoreMap
       scorePosts = (posts, callback) ->
-        inputses = []
+        inputses = {}
+        postMap = {}
+        toScore = {}
         for post in posts
-          inputs =
+          postMap[post.id] = post
+          inputses[post.id] =
             relatedPostUpvotes: _.filter(post.related_posts, (related) -> votedFor(req.user, related)).length
             relatedPostComments: _.filter(post.related_posts, (related) -> commentedOn(req.user, related)).length
             followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
@@ -293,17 +323,55 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
             followingMakers: _.intersection(followings, _.pluck(post.makers, "id")).length
             totalUpvotes: post.votes_count
             totalComments: post.comments_count
-          inputses.push inputs
         spstart = Date.now()
-        req.app.fuzzyIO.evaluate req.agent, inputses, (err, outputses) ->
+        console.log "Getting saved scores..."
+        getSavedScores inputses, req.agentVersion, (err, scoreMap) ->
           if err
-            console.error err
-            callback err
-          else
-            console.log "#{Date.now() - spstart} to score #{posts.length} posts"
-            for post, i in posts
-              post.score = outputses[i].score
+            return callback err
+          scored = unscored = 0
+          for postID, score of scoreMap
+            if score
+              scored++
+              postMap[postID].score = score
+            else
+              unscored++
+              toScore[postID] = inputses[postID]
+          ids = _.keys toScore
+          ids.sort()
+          scoreInputs = ids.map (ids) -> toScore[ids]
+          if ids.length == 0
+            console.log "No unscored posts."
             callback null, posts
+          else
+            console.log "Making request to fuzzy.io"
+            req.app.fuzzyIO.evaluate req.agent, scoreInputs, (err, outputses) ->
+              if err
+                console.error err
+                callback err
+              else
+                console.log "Done with request to fuzzy.io"
+                outputsMap = {}
+                for outputs, i in outputses
+                  outputsMap[ids[i]] = outputs
+                  postMap[ids[i]].score = outputs.score
+                saveScore = (id, callback) ->
+                  props =
+                    postID: id
+                    version: req.agentVersion
+                    inputs: inputses[id]
+                    outputs: outputsMap[id]
+                  SavedScore.create props, (err) ->
+                    if err && err.name != "AlreadyExistsError"
+                      callback err
+                    else
+                      callback null
+                console.log "Saving scores."
+                async.each ids, saveScore, (err) ->
+                  if err
+                    callback err
+                  else
+                    console.log "#{Date.now() - spstart} to score #{ids.length} posts out of #{posts.length} total"
+                    callback null, posts
       scorePosts posts, callback
   ], (err, scored) ->
     if err
@@ -526,6 +594,7 @@ router.post '/logout', (req, res, next) ->
     req.user = null
     req.token = null
     req.agent = null
+    req.agentVersion = null
   res.redirect "/", 303
 
 module.exports = router

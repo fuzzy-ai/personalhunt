@@ -23,6 +23,7 @@ Post = require './post'
 UserAgent = require './useragent'
 CacheItem = require './cacheitem'
 ClientOnlyToken = require './clientonlytoken'
+SavedScore = require './savedscore'
 
 newApp = (config, callback) ->
 
@@ -120,6 +121,7 @@ newApp = (config, callback) ->
           req.user = res.locals.user = user
           req.token = accessToken.token
           req.agent = userAgent.agent
+          req.agentVersion = userAgent.version
           next()
     else
       req.user = res.locals.user = null
@@ -157,6 +159,7 @@ newApp = (config, callback) ->
     UserAgent: UserAgent.schema
     CacheItem: CacheItem.schema
     ClientOnlyToken: ClientOnlyToken.schema
+    SavedScore: SavedScore.schema
 
   app.start = (callback) ->
     # Initialize agents
