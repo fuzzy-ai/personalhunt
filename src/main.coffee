@@ -15,7 +15,9 @@ config =
   fuzzyIOAPIKey: process.env.FUZZY_IO_API_KEY
   logLevel: process.env.LOG_LEVEL or "info"
   logFile: process.env.LOG_FILE or null
-  
+  redisHost: process.env.REDIS_HOST or "localhost"
+  redisPort: process.env.REDIS_PORT or 6379
+
 console.log "Creating app..."
 
 newApp config, (err, app) ->

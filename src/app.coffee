@@ -5,6 +5,7 @@ urlFormat = require('url').format
 
 express = require 'express'
 session = require 'express-session'
+RedisStore = require('connect-redis')(session)
 favicon = require 'static-favicon'
 cookieParser = require 'cookie-parser'
 bodyParser = require 'body-parser'
@@ -103,7 +104,7 @@ newApp = (config, callback) ->
   app.use bodyParser.json()
   app.use bodyParser.urlencoded()
   app.use cookieParser()
-  app.use session {secret: config.secret}
+  app.use session {store: new RedisStore({host: config.redisHost, port: config.redisPort}), secret: config.secret}
   app.use (req, res, next) ->
     if req.session.userID
       async.parallel [
