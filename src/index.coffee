@@ -36,6 +36,11 @@ cacheGet = (url, token, headers, callback) ->
           if err
             callback err
           else if response.statusCode == 304
+            # Touch the cache item for another 30 minutes
+            setImmediate ->
+              cacheItem.save (err) ->
+                if err
+                  console.error err
             callback null, cacheItem.body
           else
             setImmediate ->
