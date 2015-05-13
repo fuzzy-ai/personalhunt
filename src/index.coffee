@@ -247,40 +247,36 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
               "Accept": JSON_TYPE
               "Authorization": "Bearer #{token}"
             url = "https://api.producthunt.com/v1/posts/#{id}"
-            dfpstart = Date.now()
             cacheGet url, token, headers, (err, body) ->
               if err
                 callback err
               else
-                console.log "#{Date.now() - dfpstart} to get post with ID #{id}"
                 results = JSON.parse(body)
                 callback null, results.post
           getPostsForDay = (day, callback) ->
             async.waterfall [
               (callback) ->
-                gpidsstart = Date.now()
                 getPostIDs req.clientOnlyToken, day, (err, ids) ->
                   if err
                     callback err
                   else
-                    console.log "#{Date.now() - gpidsstart} to get post ids for #{day}"
                     callback null, ids
               (ids, callback) ->
-                mdfpstart = Date.now()
                 async.map ids, downloadFullPost, (err, posts) ->
                   if err
                     callback err
                   else
-                    console.log "#{Date.now() - mdfpstart} to download posts for #{day}"
                     posts = _.filter posts, (post) ->
                       !(votedFor(req.user, post) || commentedOn(req.user, post))
                     callback null, posts
             ], callback
+          gpfdmstart = Date.now()
           async.map days, getPostsForDay, (err, postses) ->
             if err
               callback err
             else
               posts = _.flatten postses
+              console.log "#{Date.now() - gpfdmstart} to retrieve #{posts.length} posts"
               callback null, posts
       ], callback
     (results, callback) ->
@@ -433,8 +429,6 @@ router.get '/authorized', (req, res, next) ->
   token = null
   user = null
 
-  last = start = Date.now()
-
   firstTime = null
 
   async.waterfall [
@@ -464,9 +458,6 @@ router.get '/authorized', (req, res, next) ->
         else
           results = JSON.parse(body)
           token = results.access_token
-          now = Date.now()
-          console.log "#{now - start} (#{now - last}) to get token"
-          last = now
           callback null
     (callback) ->
       url = 'https://api.producthunt.com/v1/me'
@@ -478,9 +469,6 @@ router.get '/authorized', (req, res, next) ->
         else
           results = JSON.parse(body)
           user = results.user
-          now = Date.now()
-          console.log "#{now - start} (#{now - last}) to get user"
-          last = now
           callback null
     (callback) ->
       User.get user.id, (err, got) ->
@@ -497,15 +485,9 @@ router.get '/authorized', (req, res, next) ->
             else
               callback null, updated
     (ensured, callback) ->
-      now = Date.now()
-      console.log "#{now - start} (#{now - last}) to get ensured"
-      last = now
       at = new AccessToken {token: token, user: user.id}
       at.save callback
     (saved, callback) ->
-      now = Date.now()
-      console.log "#{now - start} (#{now - last}) to save access token"
-      last = now
       UserAgent.get user.id, (err, agent) ->
         if err
           if err.name == "NoSuchThingError"
@@ -518,10 +500,6 @@ router.get '/authorized', (req, res, next) ->
     if err
       next err
     else
-
-      now = Date.now()
-      console.log "#{now - start} (#{now - last}) to get user token"
-      last = now
 
       req.session.userID = user.id
 
