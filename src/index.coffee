@@ -26,10 +26,12 @@ cacheGet = (url, token, headers, callback) ->
       callback err
     else
       if cacheItem && (Date.parse(cacheItem.updatedAt) > (Date.now() - THIRTY_MINUTES))
+        console.dir {url: url, etag: cacheItem?.etag, message: "CACHE HIT"}
         callback null, cacheItem.body
       else
         if cacheItem
           headers["If-None-Match"] = cacheItem.etag
+        console.dir {url: url, etag: cacheItem?.etag, message: "API request"}
         web.get url, headers, (err, response, body) ->
           if err
             callback err
