@@ -17,6 +17,7 @@ config =
   logFile: process.env.LOG_FILE or null
   redisHost: process.env.REDIS_HOST or "localhost"
   redisPort: process.env.REDIS_PORT or 6379
+  urlPrefix: process.env.URL_PREFIX or null
 
 console.log "Creating app..."
 

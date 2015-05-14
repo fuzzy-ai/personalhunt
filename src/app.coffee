@@ -34,22 +34,25 @@ newApp = (config, callback) ->
 
   app.makeURL = (relative, search) ->
 
-    props =
-      protocol: if @config.key then 'https' else 'http'
-      hostname: @config.hostname
-      pathname: relative
-
-    if @config.key?
-      if @config.port != 443
-        props.port = @config.port
+    if @config.urlPrefix
+      "#{@config.urlPrefix}#{relative}"
     else
-      if @config.port != 80
-        props.port = @config.port
+      props =
+        protocol: if @config.key then 'https' else 'http'
+        hostname: @config.hostname
+        pathname: relative
 
-    if search
-      props.search = search
+      if @config.key?
+        if @config.port != 443
+          props.port = @config.port
+      else
+        if @config.port != 80
+          props.port = @config.port
 
-    urlFormat props
+      if search
+        props.search = search
+
+      urlFormat props
 
   setupLogger = (cfg) ->
     logParams =
