@@ -40,11 +40,16 @@ body {
 }
 
 .firstrow {
-	padding-bottom: 5px;
+	padding: 0px 5px 5px 5px;
 }
 
 .productlist {
-	padding-bottom: 25px;
+  padding: 10px 5px 10px 5px;
+  cursor: pointer;
+}
+
+.productlist:hover {
+  background: #fcf5e2;
 }
 
 .day {
