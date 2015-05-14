@@ -42,7 +42,7 @@ block scripts
         .col-md-1.hidden-xs.col-sm-1
         .col-md-1.col-xs-2.col-sm-1.commentcol
       each post in posts
-        .row.productlist.vertical-align
+        .row.productlist.vertical-align(onclick='location.href=\'' + post.discussion_url + '\'')
           .col-md-1.col-xs-1.col-sm-1.upvote= post.score.toFixed(1)
           .col-md-1.hidden-xs.col-sm-1.upvote= post.votes_count
           .col-md-8.col-xs-9.col-sm-8
