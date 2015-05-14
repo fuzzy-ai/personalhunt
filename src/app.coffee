@@ -25,6 +25,7 @@ UserAgent = require './useragent'
 CacheItem = require './cacheitem'
 ClientOnlyToken = require './clientonlytoken'
 SavedScore = require './savedscore'
+getRecentPosts = require './getrecentposts'
 
 newApp = (config, callback) ->
 
@@ -182,6 +183,26 @@ newApp = (config, callback) ->
             DatabankObject.bank = db
             console.log "Connected."
             callback null
+      (callback) =>
+        console.log "Warming up recent posts cache..."
+        warmUpCache = (callback) ->
+          async.waterfall [
+            (callback) ->
+              ClientOnlyToken.ensure config.clientID, config.clientSecret, callback
+            (token, callback) ->
+              getRecentPosts token, callback
+          ], callback
+        periodic = () ->
+          warmUpCache (err, posts, days) ->
+            if err
+              console.error err
+            else
+              console.dir {posts: posts.length, days: days, message: "Warmed up cache"}
+        # Warm up every 15 minutes
+        @warmupTimeout = setTimeout periodic, 15 * 60 * 1000
+        # Warm up now
+        warmUpCache (err) ->
+          callback err
       (callback) =>
         console.log "Starting HTTP server..."
         if @config.key

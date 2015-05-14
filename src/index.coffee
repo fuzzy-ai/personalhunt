@@ -5,68 +5,17 @@ express = require 'express'
 async = require 'async'
 _ = require 'lodash'
 web = require 'fuzzy.io-web'
-moment = require 'moment-timezone'
 
 User = require './user'
 AccessToken = require './accesstoken'
 UserAgent = require './useragent'
-CacheItem = require './cacheitem'
 ClientOnlyToken = require './clientonlytoken'
 SavedScore = require './savedscore'
+getRecentPosts = require './getrecentposts'
 
 JSON_TYPE = "application/json"
 
 router = express.Router()
-
-THIRTY_MINUTES = 30 * 60 * 1000
-
-cacheGet = (url, token, headers, callback) ->
-  CacheItem.byUrlAndToken url, token, (err, cacheItem) ->
-    if err
-      callback err
-    else
-      if cacheItem && (Date.parse(cacheItem.updatedAt) > (Date.now() - THIRTY_MINUTES))
-        console.dir {url: url, etag: cacheItem?.etag, message: "CACHE HIT"}
-        callback null, cacheItem.body
-      else
-        if cacheItem
-          headers["If-None-Match"] = cacheItem.etag
-        console.dir {url: url, etag: cacheItem?.etag, message: "API request"}
-        web.get url, headers, (err, response, body) ->
-          if err
-            callback err
-          else if response.statusCode == 304
-            # Touch the cache item for another 30 minutes
-            setImmediate ->
-              cacheItem.save (err) ->
-                if err
-                  console.error err
-            callback null, cacheItem.body
-          else
-            setImmediate ->
-              if !cacheItem?
-                cacheItem = new CacheItem({url: url, token: token})
-              cacheItem.etag = response.headers.etag
-              cacheItem.body = body
-              cacheItem.save (err, saved) ->
-                if err
-                  console.error err
-            callback null, body
-
-ONE_DAY = 1000 * 60 * 60 * 24
-
-getPostIDs = (token, day, callback) ->
-  headers =
-    "Accept": JSON_TYPE
-    "Authorization": "Bearer #{token}"
-  url = "https://api.producthunt.com/v1/posts?day=#{day}"
-  cacheGet url, token, headers, (err, body) ->
-    if err
-      callback err
-    else
-      results = JSON.parse(body)
-      ids = _.pluck results.posts, "id"
-      callback null, ids
 
 defaultAgent =
   inputs:
@@ -175,53 +124,16 @@ userRequired = (req, res, next) ->
     req.session.returnTo = req.url
     res.redirect '/', 303
 
-ONE_HOUR = 1000 * 60 * 60
-
 # Gets a cached client-only token, or gets one from Product Hunt if needed
 
 clientOnlyToken = (req, res, next) ->
   {clientID, clientSecret} = req.app.config
-  ClientOnlyToken.get clientID, (err, cot) ->
-    if err && err.name != "NoSuchThingError"
+  ClientOnlyToken.ensure clientID, clientSecret, (err, token) ->
+    if err
       next err
     else
-      if cot && Date.parse(cot.expiresAt) > (Date.now() + ONE_HOUR)
-        req.clientOnlyToken = cot.token
-        next()
-      else
-        params =
-          client_id: clientID
-          client_secret: clientSecret
-          grant_type: "client_credentials"
-
-        payload = JSON.stringify params
-
-        headers =
-          "Accept": JSON_TYPE
-          "Content-Type": JSON_TYPE
-          "Content-Length": Buffer.byteLength payload
-
-        url = 'https://api.producthunt.com/v1/oauth/token'
-
-        web.post url, headers, payload, (err, response, body) ->
-          if err
-            next err
-          else if response.statusCode != 200
-            err = new Error("Bad status code #{response.statusCode} posting to #{url}: #{body}")
-            next err
-          else
-            results = JSON.parse(body)
-            if !cot?
-              cot = new ClientOnlyToken({clientID: clientID})
-            cot.token = results.access_token
-            # XXX: expiration in seconds or milliseconds?
-            cot.expiresAt = (new Date(Date.now() + (results.expires_in * 1000))).toISOString()
-            cot.save (err) ->
-              if err
-                next err
-              else
-                req.clientOnlyToken = cot.token
-                next()
+      req.clientOnlyToken = token
+      next()
 
 router.get '/', (req, res, next) ->
   if !req.user?
@@ -243,12 +155,8 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
     voters(post).indexOf(user.id) != -1
   commentedOn = (user, post) ->
     commenters(post).indexOf(user.id) != -1
-  daysAgoToSFDay = (i) ->
-    now = Date.now()
-    ms = now - i * ONE_DAY
-    moment(ms).tz('America/Los_Angeles').format('YYYY-MM-DD')
 
-  days = _.map([0..6], daysAgoToSFDay)
+  days = null
 
   async.waterfall [
     (callback) ->
@@ -262,46 +170,14 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
             else
               callback null, following
         (callback) ->
-          downloadFullPost = (id, callback) ->
-            token = req.clientOnlyToken
-            headers =
-              "Accept": JSON_TYPE
-              "Authorization": "Bearer #{token}"
-            url = "https://api.producthunt.com/v1/posts/#{id}"
-            cacheGet url, token, headers, (err, body) ->
-              if err
-                callback err
-              else
-                results = JSON.parse(body)
-                callback null, results.post
-          getPostsForDay = (day, callback) ->
-            async.waterfall [
-              (callback) ->
-                getPostIDs req.clientOnlyToken, day, (err, ids) ->
-                  if err
-                    callback err
-                  else
-                    callback null, ids
-              (ids, callback) ->
-                async.map ids, downloadFullPost, (err, posts) ->
-                  if err
-                    callback err
-                  else
-                    posts = _.filter posts, (post) ->
-                      !(votedFor(req.user, post) || commentedOn(req.user, post))
-                    callback null, posts
-            ], callback
-          gpfdmstart = Date.now()
-          async.map days, getPostsForDay, (err, postses) ->
-            if err
-              callback err
-            else
-              posts = _.flatten postses
-              console.log "#{Date.now() - gpfdmstart} to retrieve #{posts.length} posts"
-              callback null, posts
+          getRecentPosts req.clientOnlyToken, callback
       ], callback
     (results, callback) ->
-      [followings, posts] = results
+      [followings, others] = results
+      [posts, days] = others
+      # Filter ones you voted for or commented on
+      posts = _.filter posts, (post) ->
+        !(votedFor(req.user, post) || commentedOn(req.user, post))
       getSavedScores = (inputses, version, callback) ->
         idMap = {}
         for postID, inputs of inputses
@@ -321,10 +197,14 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
         toScore = {}
         for post in posts
           postMap[post.id] = post
+          if (post.user? && followings.indexOf(post.user.id) != -1)
+            fh = 1
+          else
+            fh = 0
           inputses[post.id] =
             relatedPostUpvotes: _.filter(post.related_posts, (related) -> votedFor(req.user, related)).length
             relatedPostComments: _.filter(post.related_posts, (related) -> commentedOn(req.user, related)).length
-            followingHunters: _.filter([post.user], (user) -> followings.indexOf(user.id) != -1).length
+            followingHunters: fh
             followingUpvotes: _.intersection(followings, voters(post)).length
             followingComments: _.intersection(followings, commenters(post)).length
             followingMakers: _.intersection(followings, _.pluck(post.makers, "id")).length
