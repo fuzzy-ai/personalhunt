@@ -103,6 +103,9 @@ getRecentPosts = (clientOnlyToken, callback) ->
       else
         posts = _.flatten postses
         console.log "#{Date.now() - gpfdmstart} to retrieve #{posts.length} posts"
+        _.each posts, (post) ->
+          if post?.votes?.length != post.votes_count
+            console.dir {votesLength: post?.votes?.length, voteCount: post.votes_count, post: post.id, "Vote counts don't match up"}
         callback null, posts, days
 
 module.exports = getRecentPosts
