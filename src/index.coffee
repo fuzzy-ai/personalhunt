@@ -414,12 +414,7 @@ getWeights = (client, agentID, callback) ->
           weights[input] = parseFloat(weight)
       callback null, weights
 
-startedFlag = (req, res, next) ->
-  req.startedFlag = true
-  next()
-
 showSettings = (req, res, next) ->
-  firstTime = req.startedFlag
   getWeights req.app.fuzzyIO, req.agent, (err, weights) ->
     if err
       next err
@@ -428,11 +423,9 @@ showSettings = (req, res, next) ->
       for input, weight of weights
         adjusted[input] = weight * 100
       res.render 'settings',
-        title: if firstTime then 'Get Started' else 'Settings'
-        firstTime: firstTime
+        title: 'Settings'
         weights: adjusted
 
-router.get '/getstarted', userRequired, startedFlag, showSettings
 router.get '/settings', userRequired, showSettings
 
 camelCase = (name) ->
@@ -588,8 +581,6 @@ router.get '/authorized', (req, res, next) ->
       if req.session.returnTo
         returnTo = req.session.returnTo
         delete req.session.returnTo
-      else if firstTime
-        returnTo = "/getstarted"
       else
         returnTo = "/"
 

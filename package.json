@@ -20,7 +20,7 @@
     "databank-mongodb": "0.18.x",
     "express-session": "1.10.x",
     "fuzzy.io": "0.3.x",
-    "fuzzy.io-web": "^0.1.2",
+    "fuzzy.io-web": "^0.2.0",
     "async": "0.9.x",
     "bootstrap-slider": "4.7.x",
     "lru-cache": "^2.6.1",
