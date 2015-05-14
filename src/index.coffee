@@ -1,5 +1,4 @@
 qs = require 'querystring'
-assert = require 'assert'
 
 express = require 'express'
 async = require 'async'
@@ -12,110 +11,11 @@ UserAgent = require './useragent'
 ClientOnlyToken = require './clientonlytoken'
 SavedScore = require './savedscore'
 getRecentPosts = require './getrecentposts'
+agent = require './agent'
 
 JSON_TYPE = "application/json"
 
 router = express.Router()
-
-defaultAgent =
-  inputs:
-    relatedPostUpvotes:
-      veryLow: [0, 1]
-      low: [0, 1, 2]
-      medium: [1, 2, 3]
-      high: [2, 3, 4]
-      veryHigh: [3, 4]
-    relatedPostComments:
-      veryLow: [0, 1]
-      low: [0, 1, 2]
-      medium: [1, 2, 3]
-      high: [2, 3, 4]
-      veryHigh: [3, 4]
-    followingHunters:
-      high: [0, 1, 2]
-    followingMakers:
-      high: [0, 1, 2]
-      veryHigh: [1, 2]
-    followingUpvotes:
-      veryLow: [0, 12.5]
-      low: [0, 12.5, 25]
-      medium: [12.5, 25, 37.5]
-      high: [25, 37.5, 50]
-      veryHigh: [37.5, 50]
-    followingComments:
-      veryLow: [0, 1]
-      low: [0, 1, 2]
-      medium: [1, 2, 3]
-      high: [2, 3, 4]
-      veryHigh: [3, 4]
-    totalUpvotes:
-      veryLow: [0, 125]
-      low: [0, 125, 250]
-      medium: [125, 250, 375]
-      high: [250, 375, 500]
-      veryHigh: [375, 500]
-    totalComments:
-      veryLow: [0, 10]
-      low: [0, 10, 20]
-      medium: [10, 20, 30]
-      high: [20, 30, 40]
-      veryHigh: [30, 40]
-  outputs:
-    score:
-      veryLow: [0, 25]
-      low: [0, 25, 50]
-      medium: [25, 50, 75]
-      high: [50, 75, 100]
-      veryHigh: [75, 100]
-  rules: []
-
-defaultWeights = {}
-
-for input, value of defaultAgent.inputs
-  defaultWeights[input] = 0.5
-
-makeAgent = (weights) ->
-  agent = _.cloneDeep(defaultAgent)
-  for input, inputSets of agent.inputs
-    weight = weights[input]
-    for inputSet, inputShape of inputSets
-      for output, outputSets of agent.outputs
-        if _.has(outputSets, inputSet)
-          rule = "IF #{input} IS #{inputSet} THEN #{output} IS #{inputSet} WITH #{weight}"
-          agent.rules.push rule
-  agent
-
-makeDefaultUserAgent = (client, user, callback) ->
-  agent = makeAgent defaultWeights
-  async.waterfall [
-    (callback) ->
-      client.newAgent agent, callback
-    (agent, callback) ->
-      UserAgent.create {user: user, agent: agent.id, version: agent.latestVersion}, callback
-  ], callback
-
-updateUserAgent = (client, user, agentID, weights, callback) ->
-
-  assert.ok _.isObject(client), "#{client} is not an object"
-  assert.ok _.isObject(user), "#{user} is not an object"
-  assert.ok _.isString(agentID), "#{agentID} is not a string"
-  assert.ok _.isObject(weights), "#{weights} is not an object"
-
-  newAgent = makeAgent weights
-
-  updated = null
-
-  async.waterfall [
-    (callback) ->
-      client.putAgent agentID, newAgent, callback
-    (results, callback) ->
-      updated = results
-      UserAgent.get user.id, callback
-    (ua, callback) ->
-      ua.version = updated.latestVersion
-      ua.save callback
-  ], (err) ->
-    callback err
 
 userRequired = (req, res, next) ->
   if req.user?
@@ -316,7 +216,7 @@ router.post '/settings', (req, res, next) ->
   weights = {}
   for name, value of req.body
     weights[camelCase(name)] = parseInt(value, 10)/100
-  updateUserAgent req.app.fuzzyIO, req.user, req.agent, weights, (err) ->
+  agent.update req.app.fuzzyIO, req.user, req.agent, weights, (err) ->
     if err
       next err
     else
@@ -436,14 +336,14 @@ router.get '/authorized', (req, res, next) ->
       at = new AccessToken {token: token, user: user.id}
       at.save callback
     (saved, callback) ->
-      UserAgent.get user.id, (err, agent) ->
+      UserAgent.get user.id, (err, inst) ->
         if err
           if err.name == "NoSuchThingError"
-            makeDefaultUserAgent req.app.fuzzyIO, user.id, callback
+            agent.makeDefault req.app.fuzzyIO, user.id, callback
           else
             callback err
         else
-          callback null, agent
+          callback null, inst
   ], (err) ->
     if err
       next err

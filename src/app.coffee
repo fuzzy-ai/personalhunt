@@ -120,7 +120,14 @@ newApp = (config, callback) ->
           UserAgent.get req.session.userID, callback
       ], (err, results) ->
         if err
-          next err
+          console.error err
+          # Soft failure; just log them out
+          delete req.session.userID
+          req.user = null
+          req.token = null
+          req.agent = null
+          req.agentVersion = null
+          next()
         else
           [user, accessToken, userAgent] = results
           req.user = res.locals.user = user

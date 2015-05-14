@@ -3,6 +3,8 @@
 {DatabankObject} = require 'databank'
 web = require 'fuzzy.io-web'
 
+JSON_TYPE = "application/json"
+
 ClientOnlyToken = DatabankObject.subClass 'ClientOnlyToken'
 
 ClientOnlyToken.schema =
