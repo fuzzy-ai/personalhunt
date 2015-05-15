@@ -158,6 +158,8 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
                     callback err
                   else
                     console.log "#{Date.now() - spstart} to score #{ids.length} posts out of #{posts.length} total"
+                    # Don't return unscored posts
+                    posts = _.filter posts, (post) -> post?.score?
                     callback null, posts
       scorePosts posts, callback
   ], (err, scored) ->

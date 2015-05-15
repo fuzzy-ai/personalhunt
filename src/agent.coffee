@@ -11,17 +11,11 @@ agent =
   defaultAgent:
     inputs:
       relatedPostUpvotes:
-        veryLow: [0, 1]
-        low: [0, 1, 2]
-        medium: [1, 2, 3]
-        high: [2, 3, 4]
-        veryHigh: [3, 4]
+        high: [0, 1, 2]
+        veryHigh: [1, 2]
       relatedPostComments:
-        veryLow: [0, 1]
-        low: [0, 1, 2]
-        medium: [1, 2, 3]
-        high: [2, 3, 4]
-        veryHigh: [3, 4]
+        high: [0, 1, 2]
+        veryHigh: [1, 2]
       followingHunters:
         high: [0, 1, 2]
       followingMakers:
@@ -40,17 +34,17 @@ agent =
         high: [2, 3, 4]
         veryHigh: [3, 4]
       totalUpvotes:
-        veryLow: [0, 125]
-        low: [0, 125, 250]
-        medium: [125, 250, 375]
-        high: [250, 375, 500]
-        veryHigh: [375, 500]
+        veryLow: [0, 50]
+        low: [0, 50, 100]
+        medium: [50, 100, 250]
+        high: [100, 250, 500]
+        veryHigh: [250, 500]
       totalComments:
-        veryLow: [0, 10]
-        low: [0, 10, 20]
-        medium: [10, 20, 30]
-        high: [20, 30, 40]
-        veryHigh: [30, 40]
+        veryLow: [0, 5]
+        low: [0, 5, 10]
+        medium: [5, 10, 20]
+        high: [10, 20, 50]
+        veryHigh: [20, 50]
     outputs:
       score:
         veryLow: [0, 25]
