@@ -170,7 +170,6 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
       scored = _.sortByOrder scored, ["score"], [false]
       # Take only top 20
       scored = scored.slice 0, 20
-      console.dir _.keys(scored[0])
       scored = _.map scored, (post) ->
         post.user.image_url = _.pick post.user.image_url, ["40px"]
         post.user = _.pick post.user, ["profile_url", "name", "image_url"]
