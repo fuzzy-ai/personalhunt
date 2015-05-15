@@ -25,7 +25,7 @@ UserAgent = require './useragent'
 CacheItem = require './cacheitem'
 ClientOnlyToken = require './clientonlytoken'
 SavedScore = require './savedscore'
-getRecentPosts = require './getrecentposts'
+recentPosts = require './recentposts'
 
 newApp = (config, callback) ->
 
@@ -197,7 +197,7 @@ newApp = (config, callback) ->
             (callback) ->
               ClientOnlyToken.ensure config.clientID, config.clientSecret, callback
             (token, callback) ->
-              getRecentPosts token, callback
+              recentPosts.update token, callback
           ], callback
         periodic = () ->
           warmUpCache (err, posts, days) ->

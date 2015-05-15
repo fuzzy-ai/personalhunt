@@ -19,7 +19,6 @@ block scripts
         .done(function(results) {
           var posts = results.posts;
           var days = results.days;
-          console.log(JSON.stringify(results.days));
           $('#waiting').replaceWith(tmpl('#posts-table-source', {posts: posts, days: days}));
         })
         .fail(function() {

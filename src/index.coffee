@@ -10,7 +10,7 @@ AccessToken = require './accesstoken'
 UserAgent = require './useragent'
 ClientOnlyToken = require './clientonlytoken'
 SavedScore = require './savedscore'
-getRecentPosts = require './getrecentposts'
+recentPosts = require './recentposts'
 agent = require './agent'
 
 JSON_TYPE = "application/json"
@@ -70,7 +70,7 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
             else
               callback null, following
         (callback) ->
-          getRecentPosts req.clientOnlyToken, callback
+          recentPosts.get req.clientOnlyToken, callback
       ], callback
     (results, callback) ->
       [followings, others] = results
@@ -170,10 +170,11 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
       scored = _.sortByOrder scored, ["score"], [false]
       # Take only top 20
       scored = scored.slice 0, 20
+      console.dir _.keys(scored[0])
       scored = _.map scored, (post) ->
         post.user.image_url = _.pick post.user.image_url, ["40px"]
         post.user = _.pick post.user, ["profile_url", "name", "image_url"]
-        _.pick post, ["day", "score", "votes_count", "redirect_url", "discussion_url", "name", "tagline", "user", "comments_count"]
+        _.pick post, ["id", "day", "score", "votes_count", "redirect_url", "discussion_url", "name", "tagline", "user", "comments_count"]
       res.json {days: days, posts: scored}
 
 router.get '/about', (req, res, next) ->
