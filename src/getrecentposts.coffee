@@ -14,12 +14,15 @@ ONE_DAY = 24 * 60 * 60 * 1000
 
 JSON_TYPE = "application/json"
 
-cacheGet = (url, token, headers, callback) ->
+cacheGet = (url, token, headers, cacheMax, callback) ->
+  if !callback?
+    callback = cacheMax
+    cacheMax = THIRTY_MINUTES
   CacheItem.byUrlAndToken url, token, (err, cacheItem) ->
     if err
       callback err
     else
-      if cacheItem && (Date.parse(cacheItem.updatedAt) > (Date.now() - THIRTY_MINUTES))
+      if cacheItem && (Date.parse(cacheItem.updatedAt) > (Date.now() - cacheMax))
         callback null, cacheItem.body
       else
         if cacheItem
@@ -52,7 +55,7 @@ daysAgoToSFDay = (i) ->
 
 getRecentPosts = (token, callback) ->
 
-  getAllComments = (post, callback) ->
+  getAllComments = (post, cacheMax, callback) ->
 
     comments = []
 
@@ -71,7 +74,7 @@ getRecentPosts = (token, callback) ->
 
       url = "https://api.producthunt.com/v1/posts/#{post.id}/comments?" + qs.stringify(params)
 
-      cacheGet url, token, headers, (err, body) ->
+      cacheGet url, token, headers, cacheMax, (err, body) ->
         if err
           callback err
         else
@@ -93,7 +96,7 @@ getRecentPosts = (token, callback) ->
         post.comments = comments
         callback null
 
-  getAllVotes = (post, callback) ->
+  getAllVotes = (post, cacheMax, callback) ->
 
     votes = []
 
@@ -112,7 +115,7 @@ getRecentPosts = (token, callback) ->
 
       url = "https://api.producthunt.com/v1/posts/#{post.id}/votes?" + qs.stringify(params)
 
-      cacheGet url, token, headers, (err, body) ->
+      cacheGet url, token, headers, cacheMax, (err, body) ->
         if err
           callback err
         else
@@ -138,13 +141,18 @@ getRecentPosts = (token, callback) ->
 
     posts = null
 
+    if day == daysAgoToSFDay 0
+      cacheMax = THIRTY_MINUTES
+    else
+      cacheMax = ONE_DAY
+
     async.waterfall [
       (callback) ->
         headers =
           "Accept": JSON_TYPE
           "Authorization": "Bearer #{token}"
         url = "https://api.producthunt.com/v1/posts?day=#{day}"
-        cacheGet url, token, headers, (err, body) ->
+        cacheGet url, token, headers, cacheMax, (err, body) ->
           if err
             callback err
           else
@@ -152,15 +160,19 @@ getRecentPosts = (token, callback) ->
             posts = results.posts
             callback null
       (callback) ->
+        gac = (post, callback) ->
+          getAllComments post, cacheMax, callback
+        gav = (post, callback) ->
+          getAllVotes post, cacheMax, callback
         async.parallel [
           (callback) ->
-            async.each posts, getAllComments, (err, posts) ->
+            async.each posts, gac, (err, posts) ->
               if err
                 callback err
               else
                 callback null
           (callback) ->
-            async.each posts, getAllVotes, (err) ->
+            async.each posts, gav, (err) ->
               if err
                 callback err
               else
