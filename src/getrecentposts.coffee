@@ -1,5 +1,7 @@
 # getrecentposts.coffee
 
+qs = require 'querystring'
+
 async = require 'async'
 _ = require 'lodash'
 moment = require 'moment-timezone'
@@ -43,69 +45,146 @@ cacheGet = (url, token, headers, callback) ->
                   console.error err
             callback null, body
 
-getPostIDs = (token, day, callback) ->
-  headers =
-    "Accept": JSON_TYPE
-    "Authorization": "Bearer #{token}"
-  url = "https://api.producthunt.com/v1/posts?day=#{day}"
-  cacheGet url, token, headers, (err, body) ->
-    if err
-      callback err
-    else
-      results = JSON.parse(body)
-      ids = _.pluck results.posts, "id"
-      callback null, ids
+daysAgoToSFDay = (i) ->
+  now = Date.now()
+  ms = now - i * ONE_DAY
+  moment(ms).tz('America/Los_Angeles').format('YYYY-MM-DD')
 
-getRecentPosts = (clientOnlyToken, callback) ->
+getRecentPosts = (token, callback) ->
 
-    daysAgoToSFDay = (i) ->
-      now = Date.now()
-      ms = now - i * ONE_DAY
-      moment(ms).tz('America/Los_Angeles').format('YYYY-MM-DD')
+  getAllComments = (post, callback) ->
 
-    downloadFullPost = (id, callback) ->
-      token = clientOnlyToken
+    comments = []
+
+    getNextComments = (oldest, callback) ->
+
+      params =
+        per_page: 50
+        order: "desc"
+
+      if oldest?
+        params.older = oldest
+
       headers =
         "Accept": JSON_TYPE
         "Authorization": "Bearer #{token}"
-      url = "https://api.producthunt.com/v1/posts/#{id}"
+
+      url = "https://api.producthunt.com/v1/posts/#{post.id}/comments?" + qs.stringify(params)
+
       cacheGet url, token, headers, (err, body) ->
         if err
           callback err
         else
           results = JSON.parse(body)
-          callback null, results.post
-
-    getPostsForDay = (day, callback) ->
-      async.waterfall [
-        (callback) ->
-          getPostIDs clientOnlyToken, day, (err, ids) ->
-            if err
-              callback err
+          if results.comments?.length > 0
+            comments = comments.concat results.comments
+            if comments.length < post.comments_count
+              oldest = comments[comments.length - 1].id
+              getNextComments oldest, callback
             else
-              callback null, ids
-        (ids, callback) ->
-          async.map ids, downloadFullPost, (err, posts) ->
-            if err
-              callback err
-            else
-              callback null, posts
+              callback null, comments
+          else
+            callback null, comments
 
-      ], callback
-
-    days = _.map([0..6], daysAgoToSFDay)
-
-    gpfdmstart = Date.now()
-
-    async.map days, getPostsForDay, (err, postses) ->
+    getNextComments null, (err, comments) ->
       if err
         callback err
       else
-        posts = _.flatten postses
-        console.log "#{Date.now() - gpfdmstart} to retrieve #{posts.length} posts"
-        _.each posts, (post) ->
-          if post?.votes?.length != post.votes_count
-            console.dir {votesLength: post?.votes?.length, voteCount: post.votes_count, post: post.id, "Vote counts don't match up"}
-        callback null, posts, days
+        post.comments = comments
+        callback null
+
+  getAllVotes = (post, callback) ->
+
+    votes = []
+
+    getNextVotes = (oldest, callback) ->
+
+      params =
+        per_page: 50
+        order: "desc"
+
+      if oldest?
+        params.older = oldest
+
+      headers =
+        "Accept": JSON_TYPE
+        "Authorization": "Bearer #{token}"
+
+      url = "https://api.producthunt.com/v1/posts/#{post.id}/votes?" + qs.stringify(params)
+
+      cacheGet url, token, headers, (err, body) ->
+        if err
+          callback err
+        else
+          results = JSON.parse(body)
+          if results.votes?.length > 0
+            votes = votes.concat results.votes
+            if votes.length < post.votes_count
+              oldest = votes[votes.length - 1].id
+              getNextVotes oldest, callback
+            else
+              callback null, votes
+          else
+            callback null, votes
+
+    getNextVotes null, (err, votes) ->
+      if err
+        callback err
+      else
+        post.votes = votes
+        callback null
+
+  getPostsForDay = (day, callback) ->
+
+    posts = null
+
+    async.waterfall [
+      (callback) ->
+        headers =
+          "Accept": JSON_TYPE
+          "Authorization": "Bearer #{token}"
+        url = "https://api.producthunt.com/v1/posts?day=#{day}"
+        cacheGet url, token, headers, (err, body) ->
+          if err
+            callback err
+          else
+            results = JSON.parse(body)
+            posts = results.posts
+            callback null
+      (callback) ->
+        async.parallel [
+          (callback) ->
+            async.each posts, getAllComments, (err, posts) ->
+              if err
+                callback err
+              else
+                callback null
+          (callback) ->
+            async.each posts, getAllVotes, (err) ->
+              if err
+                callback err
+              else
+                callback null
+        ], callback
+    ], (err) ->
+      if err
+        callback err
+      else
+        callback null, posts
+
+  days = _.map([0..6], daysAgoToSFDay)
+
+  gpfdmstart = Date.now()
+
+  async.map days, getPostsForDay, (err, postses) ->
+    if err
+      callback err
+    else
+      posts = _.flatten postses
+      console.log "#{Date.now() - gpfdmstart} to retrieve #{posts.length} posts"
+      _.each posts, (post) ->
+        if post?.votes?.length != post.votes_count
+          console.dir {votesLength: post?.votes?.length, voteCount: post.votes_count, post: post.id, "Vote counts don't match up"}
+      callback null, posts, days
 
 module.exports = getRecentPosts
