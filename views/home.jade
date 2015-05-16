@@ -25,9 +25,6 @@ block scripts
           $('#waiting').replaceWith(tmpl('#posts-error'));
         });
     });
-    $(function () {
-      $('[data-toggle="tooltip"]').tooltip()
-    });
   script#posts-error(type="application/x-jade").
     p.text-center(style="vertical-align: middle") An error occured.
   script#posts-table-source(type="application/x-jade").
@@ -38,8 +35,8 @@ block scripts
     .container
       .row.firstrow
         .col-md-1.col-xs-1.col-sm-1.score(data-toggle='tooltip', data-placement='bottom', title='Your affinity score') f.io
-        .col-md-1.hidden-xs.col-sm-1.score(data-toggle='tooltip', data-placement='bottom', title='Number of upvotes')
-          span.uparrow
+        .col-md-1.hidden-xs.col-sm-1.score
+          span.uparrow(data-toggle='tooltip', data-placement='bottom', title='Number of upvotes')
         .col-md-8.col-xs-9.col-sm-8
         .col-md-1.hidden-xs.col-sm-1
         .col-md-1.col-xs-2.col-sm-1.commentcol
