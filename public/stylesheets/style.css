@@ -88,14 +88,14 @@ body {
   border-top: 14px solid transparent;
   left: 20px;
   position: absolute;
-  top: -11px;
+  top: -13px;
 }
 
 .score {
 	width: 34px;
-	font-family: "Convergence";
-	padding-left: 5px;
+	padding-left: 3px;
   padding-right: 10px;
+  font-size: 12px;
 }
 
 .commentcol {
