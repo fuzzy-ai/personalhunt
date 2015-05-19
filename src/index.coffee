@@ -39,7 +39,7 @@ router.get '/', (req, res, next) ->
   if !req.user?
     res.render 'index', title: 'Your Personal Product Hunt Leaderboard'
   else
-    res.render 'home', title: "Recent Hunts You Might Like (And May Have Missed)"
+    res.render 'home', title: "Recent Hunts You Might Like"
 
 router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
 
