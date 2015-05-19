@@ -20,6 +20,14 @@ block scripts
           var posts = results.posts;
           var days = results.days;
           $('#waiting').replaceWith(tmpl('#posts-table-source', {posts: posts, days: days}));
+          $('.productlist').click(function(event) {
+            var discussion = $(this).data('discussion');
+            location.href = discussion;
+            return false;
+          });
+          $('.product-url').click(function(event) {
+            event.stopPropagation();
+          });
         })
         .fail(function() {
           $('#waiting').replaceWith(tmpl('#posts-error'));
@@ -41,11 +49,11 @@ block scripts
         .col-md-1.hidden-xs.col-sm-1
         .col-md-1.col-xs-2.col-sm-1.commentcol
       each post in posts
-        .row.productlist.vertical-align(onclick='location.href=\'' + post.discussion_url + '\'')
+        .row.productlist.vertical-align(data-discussion=post.discussion_url)
           .col-md-1.col-xs-1.col-sm-1.upvote= (post.score/10.0).toFixed(1)
           .col-md-1.hidden-xs.col-sm-1.upvote= post.votes_count
           .col-md-8.col-xs-9.col-sm-8
-            a.title(href=post.redirect_url)= post.name
+            a.title.product-url(href=post.redirect_url)= post.name
             .description= post.tagline
           .col-md-1.hidden-xs.col-sm-1
             a(href=post.user.profile_url, title=post.user.name)
