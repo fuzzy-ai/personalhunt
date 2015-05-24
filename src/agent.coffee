@@ -34,17 +34,17 @@ agent =
         high: [2, 3, 4]
         veryHigh: [3, 4]
       totalUpvotes:
-        veryLow: [0, 50]
-        low: [0, 50, 100]
-        medium: [50, 100, 250]
-        high: [100, 250, 500]
-        veryHigh: [250, 500]
+        veryLow: [42.3, 125]
+        low: [60, 140, 290]
+        medium: [173, 320.3, 559]
+        high: [344, 563, 860]
+        veryHigh: [605, 879]
       totalComments:
-        veryLow: [0, 5]
-        low: [0, 5, 10]
-        medium: [5, 10, 20]
-        high: [10, 20, 50]
-        veryHigh: [20, 50]
+        veryLow: [1.6, 5]
+        low: [2, 5.6,  10]
+        medium: [6, 10.9, 23]
+        high: [13, 25.6, 43]
+        veryHigh: [29, 45.3]
     outputs:
       score:
         veryLow: [0, 25]
