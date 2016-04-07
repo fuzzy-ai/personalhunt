@@ -1,6 +1,5 @@
 fs = require "fs"
 
-{print} = require "sys"
 {spawn} = require "child_process"
 
 glob = require "glob"
@@ -20,7 +19,7 @@ cmd = (str, env, callback) ->
   proc.stderr.on "data", (data) ->
     process.stderr.write data.toString()
   proc.stdout.on "data", (data) ->
-    print data.toString()
+    process.stdout.write data.toString()
   proc.on "exit", (code) ->
     callback?() if code is 0
 
@@ -42,7 +41,8 @@ clean = (callback) ->
     glob pattern, (err, files) ->
       for file in files
         fs.unlinkSync file
-  callback()
+   if callback?
+     callback()
 
 task "clean", "Clean up extra files", ->
   clean()
