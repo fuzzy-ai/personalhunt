@@ -5,9 +5,9 @@ qs = require 'querystring'
 async = require 'async'
 _ = require 'lodash'
 moment = require 'moment-timezone'
-web = require 'fuzzy.io-web'
 
 CacheItem = require './cacheitem'
+limitedGet = require './limited-get'
 
 THIRTY_MINUTES = 30 * 60 * 1000
 ONE_DAY = 24 * 60 * 60 * 1000
@@ -27,7 +27,7 @@ cacheGet = (url, token, headers, cacheMax, callback) ->
       else
         if cacheItem
           headers["If-None-Match"] = cacheItem.etag
-        web.get url, headers, (err, response, body) ->
+        limitedGet url, headers, (err, response, body) ->
           if err
             callback err
           else if response.statusCode == 304

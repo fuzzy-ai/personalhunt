@@ -12,6 +12,7 @@ ClientOnlyToken = require './clientonlytoken'
 SavedScore = require './savedscore'
 recentPosts = require './recentposts'
 agent = require './agent'
+limitedGet = require './limited-get'
 
 JSON_TYPE = "application/json"
 
@@ -249,7 +250,7 @@ updateFollowing = (db, user, token, callback) ->
 
     url = "https://api.producthunt.com/v1/users/#{user.id}/following?" + qs.stringify(params)
 
-    web.get url, {Authorization: "Bearer #{token}"}, (err, response, body) ->
+    limitedGet url, {Authorization: "Bearer #{token}"}, (err, response, body) ->
       if err
         callback err
       else if response.statusCode != 200
@@ -311,7 +312,7 @@ router.get '/authorized', (req, res, next) ->
           callback null
     (callback) ->
       url = 'https://api.producthunt.com/v1/me'
-      web.get url, {Authorization: "Bearer #{token}"}, (err, response, body) ->
+      limitedGet url, {Authorization: "Bearer #{token}"}, (err, response, body) ->
         if err
           callback err
         else if response.statusCode != 200
