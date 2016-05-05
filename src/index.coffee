@@ -168,7 +168,7 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
       next err
     else
       # Sort by descending score
-      scored = _.sortByOrder scored, ["score"], [false]
+      scored = _.orderBy scored, ["score"], ["desc"]
       # Take only top 20
       scored = scored.slice 0, 20
       scored = _.map scored, (post) ->
