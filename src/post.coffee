@@ -42,7 +42,7 @@ Post.beforeCreate = (props, callback) ->
         if err
           callback err
         else
-          props.makers = _.pluck(makers, "id")
+          props.makers = _.map(makers, "id")
           callback null
   ], (err) ->
     if err

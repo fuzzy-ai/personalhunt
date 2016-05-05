@@ -45,7 +45,7 @@ router.get '/', (req, res, next) ->
 router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
 
   voters = (post) ->
-    _.pluck(post.votes, "user_id")
+    _.map(post.votes, "user_id")
   commenters = (post) ->
     commentersInArray = (comments) ->
       _.union(_.flatten(_.map(comments, commentersInComment)))
@@ -108,7 +108,7 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
             followingHunters: fh
             followingUpvotes: _.intersection(followings, voters(post)).length
             followingComments: _.intersection(followings, commenters(post)).length
-            followingMakers: _.intersection(followings, _.pluck(post.makers, "id")).length
+            followingMakers: _.intersection(followings, _.map(post.makers, "id")).length
             totalUpvotes: post.votes_count
             totalComments: post.comments_count
         spstart = Date.now()
@@ -257,9 +257,9 @@ updateFollowing = (db, user, token, callback) ->
         callback new Error("Bad status code #{response.statusCode} getting #{url}: #{body}")
       else
         results = JSON.parse(body)
-        page = _.pluck results.following, "id"
-        users = _.pluck results.following, "user"
-        userIDs = _.map(_.pluck(users, "id"), (id) -> parseInt(id, 10))
+        page = _.map results.following, "id"
+        users = _.map results.following, "user"
+        userIDs = _.map(_.map(users, "id"), (id) -> parseInt(id, 10))
         if page.length > 0
           following = following.concat userIDs
           getNext page[page.length - 1], callback
