@@ -1,4 +1,4 @@
-FROM node-6-onbuild
+FROM node:6-onbuild
 
 RUN npm install -g coffee-script
 RUN cake build
