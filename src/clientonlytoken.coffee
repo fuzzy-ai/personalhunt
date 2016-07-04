@@ -25,9 +25,6 @@ ClientOnlyToken.beforeCreate = (props, callback) ->
   if !props.token
     return callback new Error("No token")
 
-  if !props.expiresAt
-    return callback new Error("No expiresAt")
-
   props.createdAt = props.updatedAt = (new Date()).toISOString()
 
   callback null, props
@@ -47,6 +44,9 @@ ClientOnlyToken::beforeSave = (callback) ->
 
   callback null
 
+ClientOnlyToken::expired = ->
+  !@expiresAt? or (Date.parse(@expiresAt) > (Date.now() + ONE_HOUR))
+
 ONE_HOUR = 1000 * 60 * 60
 
 ClientOnlyToken.ensure = (clientID, clientSecret, callback) ->
@@ -55,7 +55,7 @@ ClientOnlyToken.ensure = (clientID, clientSecret, callback) ->
     if err && err.name != "NoSuchThingError"
       callback err
     else
-      if cot && Date.parse(cot.expiresAt) > (Date.now() + ONE_HOUR)
+      if cot && !cot.expired()
         callback null, cot.token
       else
         params =
@@ -85,17 +85,14 @@ ClientOnlyToken.ensure = (clientID, clientSecret, callback) ->
               cot = new ClientOnlyToken({clientID: clientID})
             cot.token = results.access_token
             # XXX: expiration in seconds or milliseconds?
-            if !_.isNumber results.expires_in
-              msg = "Expected results '#{body}' to include number 'expires_in'"
-              callback new Error(msg)
-            else
+            if _.isNumber results.expires_in
               expiresAt = new Date(Date.now() + (results.expires_in * 1000))
               cot.expiresAt = expiresAt.toISOString()
 
-              cot.save (err) ->
-                if err
-                  callback err
-                else
-                  callback null, cot.token
+            cot.save (err) ->
+              if err
+                callback err
+              else
+                callback null, cot.token
 
 module.exports = ClientOnlyToken
