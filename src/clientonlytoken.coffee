@@ -1,5 +1,6 @@
 # ClientOnlyToken.coffee
 
+_ = require 'lodash'
 {DatabankObject} = require 'databank'
 web = require 'fuzzy.io-web'
 
@@ -84,8 +85,8 @@ ClientOnlyToken.ensure = (clientID, clientSecret, callback) ->
               cot = new ClientOnlyToken({clientID: clientID})
             cot.token = results.access_token
             # XXX: expiration in seconds or milliseconds?
-            if !results.expires_in?
-              msg = "Expected results '#{body}' to include 'expires_in'"
+            if !_.isNumber results.expires_in
+              msg = "Expected results '#{body}' to include number 'expires_in'"
               callback new Error(msg)
             else
               expiresAt = new Date(Date.now() + (results.expires_in * 1000))
