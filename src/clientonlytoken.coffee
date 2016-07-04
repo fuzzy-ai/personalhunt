@@ -75,7 +75,8 @@ ClientOnlyToken.ensure = (clientID, clientSecret, callback) ->
           if err
             callback err
           else if response.statusCode != 200
-            err = new Error("Bad status code #{response.statusCode} posting to #{url}: #{body}")
+            code = response.statusCode
+            err = new Error("Status code #{code} posting to #{url}: #{body}")
             callback err
           else
             results = JSON.parse(body)
@@ -83,11 +84,17 @@ ClientOnlyToken.ensure = (clientID, clientSecret, callback) ->
               cot = new ClientOnlyToken({clientID: clientID})
             cot.token = results.access_token
             # XXX: expiration in seconds or milliseconds?
-            cot.expiresAt = (new Date(Date.now() + (results.expires_in * 1000))).toISOString()
-            cot.save (err) ->
-              if err
-                callback err
-              else
-                callback null, cot.token
+            if !results.expires_in?
+              msg = "Expected results '#{body}' to include 'expires_in'"
+              callback new Error(msg)
+            else
+              expiresAt = new Date(Date.now() + (results.expires_in * 1000))
+              cot.expiresAt = expiresAt.toISOString()
+
+              cot.save (err) ->
+                if err
+                  callback err
+                else
+                  callback null, cot.token
 
 module.exports = ClientOnlyToken
