@@ -14,4 +14,4 @@ personalhunt:
     CLIENT_ID: "Your client ID"
     CLIENT_SECRET: "Your client secret"
     SECRET: "My dog has fleas"
-    FUZZY_IO_API_KEY: "Your fuzzy.io API key"
+    FUZZY_IO_API_KEY: "Your fuzzy.ai API key"

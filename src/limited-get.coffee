@@ -4,7 +4,7 @@
 # How long to wait before making a request
 
 async = require 'async'
-web = require 'fuzzy.io-web'
+web = require 'fuzzy.ai-web'
 
 debug = require('debug')('personalhunt:limited-get')
 

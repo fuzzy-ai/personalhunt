@@ -2,7 +2,7 @@
 
 _ = require 'lodash'
 {DatabankObject} = require 'databank'
-web = require 'fuzzy.io-web'
+web = require 'fuzzy.ai-web'
 
 JSON_TYPE = "application/json"
 

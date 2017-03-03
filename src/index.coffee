@@ -3,7 +3,7 @@ qs = require 'querystring'
 express = require 'express'
 async = require 'async'
 _ = require 'lodash'
-web = require 'fuzzy.io-web'
+web = require 'fuzzy.ai-web'
 
 User = require './user'
 AccessToken = require './accesstoken'
@@ -131,13 +131,13 @@ router.get '/posts', userRequired, clientOnlyToken, (req, res, next) ->
             console.log "No unscored posts."
             callback null, posts
           else
-            console.log "Making request to fuzzy.io"
+            console.log "Making request to fuzzy.ai"
             req.app.fuzzyIO.evaluate req.agent, scoreInputs, (err, outputses) ->
               if err
                 console.error err
                 callback err
               else
-                console.log "Done with request to fuzzy.io"
+                console.log "Done with request to fuzzy.ai"
                 outputsMap = {}
                 for outputs, i in outputses
                   outputsMap[ids[i]] = outputs

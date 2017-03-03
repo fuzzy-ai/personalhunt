@@ -12,10 +12,10 @@ bodyParser = require 'body-parser'
 {Databank, DatabankObject} = require('databank')
 async = require 'async'
 _ = require 'lodash'
-FuzzyIOClient = require 'fuzzy.io'
+FuzzyIOClient = require 'fuzzy.ai'
 Logger = require 'bunyan'
 uuid = require 'node-uuid'
-web = require 'fuzzy.io-web'
+web = require 'fuzzy.ai-web'
 
 routes = require './index'
 AccessToken = require './accesstoken'
