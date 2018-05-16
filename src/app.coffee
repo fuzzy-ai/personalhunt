@@ -15,7 +15,7 @@ _ = require 'lodash'
 FuzzyIOClient = require 'fuzzy.ai'
 Logger = require 'bunyan'
 uuid = require 'node-uuid'
-web = require 'fuzzy.ai-web'
+web = require '@fuzzy-ai/web'
 
 routes = require './index'
 AccessToken = require './accesstoken'

@@ -3,7 +3,7 @@ qs = require 'querystring'
 express = require 'express'
 async = require 'async'
 _ = require 'lodash'
-web = require 'fuzzy.ai-web'
+web = require '@fuzzy-ai/web'
 
 User = require './user'
 AccessToken = require './accesstoken'
